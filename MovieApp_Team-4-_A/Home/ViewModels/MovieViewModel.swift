@@ -6,6 +6,8 @@
 //
 import Foundation
 import Combine
+import SwiftUI
+
 @MainActor
 class MovieViewModel: ObservableObject {
 
@@ -15,6 +17,7 @@ class MovieViewModel: ObservableObject {
 
     private let apiService = APIService()
 
+    // This is the core logic for your search functionality
     var filteredMovies: [MovieRecord] {
         guard !searchText.isEmpty else { return movies }
 
@@ -25,8 +28,12 @@ class MovieViewModel: ObservableObject {
             let genreMatch = movie.fields.genre.contains {
                 $0.localizedCaseInsensitiveContains(searchText)
             }
+            
+            let actorMatch = movie.fields.actors?.contains {
+                $0.localizedCaseInsensitiveContains(searchText)
+            } ?? false
 
-            return titleMatch || genreMatch
+            return titleMatch || genreMatch || actorMatch
         }
     }
 

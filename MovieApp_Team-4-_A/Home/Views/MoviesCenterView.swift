@@ -28,14 +28,14 @@ struct MoviesCenterView: View {
                                 .padding()
                         }
 
-                        // ⭐️ Highly Rated (LARGE)
+                        // Highly Rated Row
                         MovieHorizontalRow(
                             title: "Highly Rated",
                             movies: viewModel.highlyRatedMovies,
                             isLarge: true
                         )
 
-                        // 🎭 Genres
+                        // Genre Rows
                         ForEach(viewModel.genres, id: \.self) { genre in
                             MovieHorizontalRow(
                                 title: genre,
@@ -51,7 +51,6 @@ struct MoviesCenterView: View {
         }
     }
 
-    // MARK: - Header with Profile Icon
     private var header: some View {
         HStack {
             Text("Movies Center")
@@ -73,15 +72,15 @@ struct MoviesCenterView: View {
         .padding(.top)
     }
 
-    // MARK: - Search Bar
     private var searchBar: some View {
         HStack {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.gray)
 
-            TextField("Search for Movie name , actors...",
+            TextField("Search for Movie name, actors...",
                       text: $viewModel.searchText)
                 .foregroundColor(.white)
+                .autocorrectionDisabled()
         }
         .padding(12)
         .background(Color(white: 0.15))
@@ -90,17 +89,13 @@ struct MoviesCenterView: View {
     }
 }
 
-
-import SwiftUI
-
+// ⭐️ YOUR ORIGINAL MOVIE CARD RESTORED
 struct MovieCard: View {
-
     let movie: MovieRecord
-    var isLarge: Bool = false   // ⭐️ NEW
+    var isLarge: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-
             AsyncImage(url: URL(string: movie.fields.poster)) { image in
                 image
                     .resizable()
@@ -108,7 +103,7 @@ struct MovieCard: View {
             } placeholder: {
                 Color.gray
             }
-            .frame(height: isLarge ? 280 : 220)   // ⭐️ DIFFERENCE
+            .frame(height: isLarge ? 280 : 220)
             .cornerRadius(16)
             .clipped()
 
@@ -129,23 +124,20 @@ struct MovieCard: View {
     }
 }
 
+// ⭐️ UPDATED EXTENSION TO ENABLE SEARCH
 extension MovieViewModel {
-
-    /// Highly rated movies (IMDb >= 9)
     var highlyRatedMovies: [MovieRecord] {
-        movies.filter { $0.fields.imdbRating >= 9.0 }
+        filteredMovies.filter { $0.fields.imdbRating >= 9.0 }
             .sorted { $0.fields.imdbRating > $1.fields.imdbRating }
     }
 
-    /// Group movies by genre
     var moviesByGenre: [String: [MovieRecord]] {
-        Dictionary(grouping: movies.flatMap { movie in
+        Dictionary(grouping: filteredMovies.flatMap { movie in
             movie.fields.genre.map { ($0, movie) }
         }) { $0.0 }
         .mapValues { $0.map { $0.1 } }
     }
 
-    /// Sorted genre names
     var genres: [String] {
         moviesByGenre.keys.sorted()
     }
