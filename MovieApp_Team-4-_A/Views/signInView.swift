@@ -108,3 +108,6 @@ struct SignInView: View {
         }
     }
 }
+#Preview {
+    SignInView(isAuthenticated: .constant(false))
+}

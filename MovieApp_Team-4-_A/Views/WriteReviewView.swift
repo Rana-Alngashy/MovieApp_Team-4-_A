@@ -103,3 +103,6 @@ struct WriteReviewView: View {
         .navigationBarHidden(true)
     }
 }
+#Preview {
+    WriteReviewView()
+}

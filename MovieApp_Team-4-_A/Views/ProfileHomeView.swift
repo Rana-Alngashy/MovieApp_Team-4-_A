@@ -257,3 +257,8 @@ struct InfoField: View {
         .frame(height: 55)
     }
 }
+#Preview {
+    NavigationStack {
+        ProfileHomeView()
+    }
+}

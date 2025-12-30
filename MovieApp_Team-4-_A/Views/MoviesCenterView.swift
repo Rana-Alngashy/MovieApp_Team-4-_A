@@ -177,3 +177,6 @@ extension MovieViewModel {
         moviesByGenre.keys.sorted()
     }
 }
+#Preview {
+    MoviesCenterView()
+}
