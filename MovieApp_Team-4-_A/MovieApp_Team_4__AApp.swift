@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct MovieApp_Team_4__AApp: App {
+struct MovieApp_Team_4_AApp: App {
 
     @State private var isAuthenticated = false
     @State private var signedInEmail = ""
@@ -9,13 +9,15 @@ struct MovieApp_Team_4__AApp: App {
     var body: some Scene {
         WindowGroup {
             if isAuthenticated {
-                MoviesCenterView(signedInEmail: signedInEmail)
+                MoviesCenterView(
+                    isAuthenticated: $isAuthenticated,
+                    signedInEmail: $signedInEmail
+                )
             } else {
                 SignInView(
                     isAuthenticated: $isAuthenticated,
                     signedInEmail: $signedInEmail
                 )
-                .transition(.opacity)
             }
         }
     }

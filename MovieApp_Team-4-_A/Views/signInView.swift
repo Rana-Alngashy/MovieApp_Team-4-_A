@@ -103,9 +103,9 @@ struct SignInView: View {
         passwordInvalid = password.count < 8
 
         if !emailInvalid && !passwordInvalid {
-            signedInEmail = email // ✅ SAVE the correct user email here
             withAnimation {
-                isAuthenticated = true // Navigate to MoviesCenter
+                signedInEmail = email
+                isAuthenticated = true
             }
         }
     }

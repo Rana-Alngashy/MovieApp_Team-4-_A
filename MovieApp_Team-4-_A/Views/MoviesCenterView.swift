@@ -1,9 +1,12 @@
 import SwiftUI
 
 struct MoviesCenterView: View {
-    let signedInEmail: String
+
+    @Binding var isAuthenticated: Bool
+    @Binding var signedInEmail: String
 
     @StateObject private var viewModel = MovieViewModel()
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -52,7 +55,10 @@ struct MoviesCenterView: View {
             Spacer()
 
             NavigationLink {
-                ProfileHomeView(signedInEmail: signedInEmail)
+                ProfileHomeView(
+                    isAuthenticated: $isAuthenticated,
+                    signedInEmail: $signedInEmail
+                )
             } label: {
                 Image(systemName: "person.crop.circle")
                     .resizable()
@@ -165,4 +171,11 @@ extension MovieViewModel {
     var genres: [String] {
         moviesByGenre.keys.sorted()
     }
+}
+
+#Preview {
+    MoviesCenterView(
+        isAuthenticated: .constant(true),
+        signedInEmail: .constant("Noora@gmail.com")
+    )
 }
