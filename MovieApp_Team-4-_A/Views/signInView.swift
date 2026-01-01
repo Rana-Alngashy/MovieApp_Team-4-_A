@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SignInView: View {
     @Binding var isAuthenticated: Bool // Connected to App state
+    @Binding var signedInEmail: String // ✅ add this (keep the email for profile)
 
     @State private var email = ""
     @State private var password = ""
@@ -100,14 +101,16 @@ struct SignInView: View {
     func validateFields() {
         emailInvalid = !email.contains("@") || !email.contains(".")
         passwordInvalid = password.count < 8
-        
+
         if !emailInvalid && !passwordInvalid {
+            signedInEmail = email // ✅ SAVE the correct user email here
             withAnimation {
                 isAuthenticated = true // Navigate to MoviesCenter
             }
         }
     }
 }
+
 #Preview {
-    SignInView(isAuthenticated: .constant(false))
+    SignInView(isAuthenticated: .constant(false), signedInEmail: .constant(""))
 }

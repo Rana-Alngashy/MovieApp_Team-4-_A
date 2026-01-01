@@ -1,15 +1,9 @@
-//
-//  MoviesCenterView.swift
-//  Movies
-//
-//  Created by Rana Alngashy on 06/07/1447 AH.
-//
 import SwiftUI
 
 struct MoviesCenterView: View {
+    let signedInEmail: String
 
     @StateObject private var viewModel = MovieViewModel()
-
     var body: some View {
         NavigationStack {
             ZStack {
@@ -28,14 +22,12 @@ struct MoviesCenterView: View {
                                 .padding()
                         }
 
-                        // Highly Rated Row
                         MovieHorizontalRow(
                             title: "Highly Rated",
                             movies: viewModel.highlyRatedMovies,
                             isLarge: true
                         )
 
-                        // Genre Rows
                         ForEach(viewModel.genres, id: \.self) { genre in
                             MovieHorizontalRow(
                                 title: genre,
@@ -60,7 +52,7 @@ struct MoviesCenterView: View {
             Spacer()
 
             NavigationLink {
-                ProfileHomeView()
+                ProfileHomeView(signedInEmail: signedInEmail)
             } label: {
                 Image(systemName: "person.crop.circle")
                     .resizable()
@@ -96,7 +88,6 @@ struct MovieCard: View {
 
     var body: some View {
         if isLarge {
-            // ⭐️ GOAL UI: HIGH RATED CARD
             ZStack(alignment: .bottomLeading) {
                 AsyncImage(url: URL(string: movie.fields.poster)) { image in
                     image.resizable().aspectRatio(contentMode: .fill)
@@ -107,13 +98,11 @@ struct MovieCard: View {
                 .cornerRadius(12)
                 .clipped()
 
-                // Overlay Content
                 VStack(alignment: .leading, spacing: 4) {
                     Text(movie.fields.name)
-                        .font(.system(size: 38, weight: .bold)) // Large Bold Title
+                        .font(.system(size: 38, weight: .bold))
                         .foregroundColor(.white)
-                    
-                    // Star Rating (Smaller Stars)
+
                     HStack(spacing: 2) {
                         ForEach(0..<5) { i in
                             Image(systemName: i < 4 ? "star.fill" : "star.leadinghalf.filled")
@@ -121,10 +110,9 @@ struct MovieCard: View {
                                 .foregroundColor(Color(.gold1))
                         }
                     }
-                    
-                    // Corrected Rating Math
+
                     HStack(spacing: 5) {
-                        Text(String(format: "%.1f", movie.fields.imdbRating / 2)) // Divide by 2
+                        Text(String(format: "%.1f", movie.fields.imdbRating / 2))
                             .font(.system(size: 20, weight: .bold))
                         Text("out of 5")
                             .font(.system(size: 14))
@@ -138,20 +126,21 @@ struct MovieCard: View {
                 }
                 .padding(20)
                 .background(
-                    LinearGradient(gradient: Gradient(colors: [.clear, .black.opacity(0.9)]),
-                                   startPoint: .top, endPoint: .bottom)
+                    LinearGradient(
+                        gradient: Gradient(colors: [.clear, .black.opacity(0.9)]),
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
                     .cornerRadius(12)
                 )
             }
         } else {
-            // ⭐️ GOAL UI: VERTICAL POSTER CARD
             VStack(alignment: .leading) {
                 AsyncImage(url: URL(string: movie.fields.poster)) { image in
                     image.resizable().aspectRatio(contentMode: .fill)
                 } placeholder: {
                     Color.gray.opacity(0.2)
                 }
-                // Strict vertical aspect ratio
                 .frame(width: 175, height: 260)
                 .cornerRadius(10)
                 .clipped()
@@ -159,7 +148,7 @@ struct MovieCard: View {
         }
     }
 }
-// ⭐️ UPDATED EXTENSION TO ENABLE SEARCH
+
 extension MovieViewModel {
     var highlyRatedMovies: [MovieRecord] {
         filteredMovies.filter { $0.fields.imdbRating >= 9.0 }
@@ -176,7 +165,4 @@ extension MovieViewModel {
     var genres: [String] {
         moviesByGenre.keys.sorted()
     }
-}
-#Preview {
-    MoviesCenterView()
 }

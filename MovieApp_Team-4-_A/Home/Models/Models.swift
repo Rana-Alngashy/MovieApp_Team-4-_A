@@ -31,3 +31,38 @@ struct MovieFields: Codable {
         case imdbRating = "IMDb_rating"
     }
 }
+struct UserResponse: Codable { let records: [UserRecord] }
+
+struct UserRecord: Codable, Identifiable {
+    let id: String
+    let fields: UserFields
+}
+
+struct UserFields: Codable {
+    let name: String?
+    let email: String
+    let password: String?
+    let profileImage: String?
+
+    enum CodingKeys: String, CodingKey {
+        case name, email, password
+        case profileImage = "profile_image"
+    }
+}
+
+struct SavedMoviesResponse: Codable { let records: [SavedMovieRecord] }
+
+struct SavedMovieRecord: Codable, Identifiable {
+    let id: String
+    let fields: SavedMovieFields
+}
+
+struct SavedMovieFields: Codable {
+    let userID: String
+    let movieID: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case userID = "user_id"
+        case movieID = "movie_id"
+    }
+}
