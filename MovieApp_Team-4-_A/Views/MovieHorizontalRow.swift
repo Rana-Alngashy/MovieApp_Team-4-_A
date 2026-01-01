@@ -5,6 +5,7 @@
 //  Created by Rana Alngashy on 08/07/1447 AH.
 //
 import SwiftUI
+
 struct MovieHorizontalRow: View {
     let title: String
     let movies: [MovieRecord]
@@ -32,7 +33,11 @@ struct MovieHorizontalRow: View {
                 // The dots count is automatic based on movies.count
                 TabView {
                     ForEach(movies) { movie in
-                        MovieCard(movie: movie, isLarge: true)
+                        // ⭐️ ADDED: NavigationLink with value for NavigationStack
+                        NavigationLink(value: movie) {
+                            MovieCard(movie: movie, isLarge: true)
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
                 }
                 .frame(height: 460) // Enough space for image + dots
@@ -41,7 +46,11 @@ struct MovieHorizontalRow: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
                         ForEach(movies) { movie in
-                            MovieCard(movie: movie, isLarge: false)
+                            // ⭐️ ADDED: NavigationLink with value for NavigationStack
+                            NavigationLink(value: movie) {
+                                MovieCard(movie: movie, isLarge: false)
+                            }
+                            .buttonStyle(PlainButtonStyle())
                         }
                     }
                     .padding(.horizontal)
@@ -50,4 +59,3 @@ struct MovieHorizontalRow: View {
         }
     }
 }
-

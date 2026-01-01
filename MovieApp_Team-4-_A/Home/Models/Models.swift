@@ -6,13 +6,23 @@
 //
 import Foundation
 
+import Foundation
+
 struct MovieResponse: Codable {
     let records: [MovieRecord]
 }
 
-struct MovieRecord: Codable, Identifiable {
+struct MovieRecord: Codable, Identifiable, Hashable {
     let id: String
     let fields: MovieFields
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+    
+    static func == (lhs: MovieRecord, rhs: MovieRecord) -> Bool {
+        lhs.id == rhs.id
+    }
 }
 
 struct MovieFields: Codable {
@@ -60,6 +70,8 @@ struct SavedMovieRecord: Codable, Identifiable {
 struct SavedMovieFields: Codable {
     let userID: String
     let movieID: [String]
+    
+    
 
     enum CodingKeys: String, CodingKey {
         case userID = "user_id"

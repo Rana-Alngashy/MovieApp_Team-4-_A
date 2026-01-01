@@ -12,12 +12,32 @@ import SwiftUI
 /// including cover image, metadata, synopsis, director, cast, and user reviews
 struct MoviesDetailsView: View {
     
+    // MARK: - Properties
+    /// The movie record passed from the previous screen
+    let movie: MovieRecord
+    
     // MARK: - State Properties
     /// Controls whether the movie is bookmarked/saved
     @State private var isBookmarked: Bool = false
     
+    /// Stores the saved_movies record ID if bookmarked
+    @State private var savedMovieRecordId: String?
+    
+    /// Reviews loaded from API
+    @State private var reviews: [ReviewRecord] = []
+    
+    /// Controls whether the write review sheet is presented
+    @State private var showWriteReview: Bool = false
+    
     /// Environment variable to handle navigation back
     @Environment(\.dismiss) private var dismiss
+    
+    /// API Service instance
+    private let apiService = APIService()
+    
+    /// Current user ID (in real app, get from authentication)
+    /// ⚠️ Replace with actual user ID from your auth system
+    private let currentUserId = "recPRxIRAyyvQxfkP"
     
     var body: some View {
         ZStack {
@@ -32,12 +52,33 @@ struct MoviesDetailsView: View {
                     // MARK: - Hero Image Section
                     /// Movie cover image with gradient overlay and navigation buttons
                     ZStack(alignment: .top) {
-                        // Movie poster image
-                        Image("Shawshanks cover image")
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: 390, height: 444)
-                            .clipped()
+                        // Movie poster image from API
+                        AsyncImage(url: URL(string: movie.fields.poster)) { phase in
+                            switch phase {
+                            case .empty:
+                                Rectangle()
+                                    .fill(Color.gray.opacity(0.3))
+                                    .frame(width: 390, height: 444)
+                                    .overlay(ProgressView().tint(.white))
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: 390, height: 444)
+                                    .clipped()
+                            case .failure:
+                                Rectangle()
+                                    .fill(Color.gray.opacity(0.3))
+                                    .frame(width: 390, height: 444)
+                                    .overlay(
+                                        Image(systemName: "photo")
+                                            .font(.system(size: 40))
+                                            .foregroundColor(.gray)
+                                    )
+                            @unknown default:
+                                EmptyView()
+                            }
+                        }
                         
                         // Gradient overlay for better text readability
                         LinearGradient(
@@ -81,7 +122,9 @@ struct MoviesDetailsView: View {
                             
                             // Bookmark button
                             Button(action: {
-                                isBookmarked.toggle()
+                                Task {
+                                    await toggleBookmark()
+                                }
                             }) {
                                 Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
                                     .font(.system(size: 18, weight: .medium))
@@ -95,7 +138,7 @@ struct MoviesDetailsView: View {
                         /// Movie title positioned at the bottom of the hero image
                         VStack(alignment: .leading) {
                             Spacer()
-                            Text("Shawshank")
+                            Text(movie.fields.name)
                                 .font(.system(size: 32, weight: .bold))
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 16)
@@ -112,7 +155,7 @@ struct MoviesDetailsView: View {
                             Text("Duration")
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundColor(.white)
-                            Text("2 hours 22 mins")
+                            Text(movie.fields.runtime)
                                 .font(.system(size: 14))
                                 .foregroundColor(.gray)
                         }
@@ -122,7 +165,7 @@ struct MoviesDetailsView: View {
                             Text("Language")
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundColor(.white)
-                            Text("English")
+                            Text(movie.fields.language.joined(separator: ", "))
                                 .font(.system(size: 14))
                                 .foregroundColor(.gray)
                         }
@@ -136,7 +179,7 @@ struct MoviesDetailsView: View {
                             Text("Genre")
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundColor(.white)
-                            Text("Drama")
+                            Text(movie.fields.genre.joined(separator: ", "))
                                 .font(.system(size: 14))
                                 .foregroundColor(.gray)
                         }
@@ -147,7 +190,7 @@ struct MoviesDetailsView: View {
                             Text("Age")
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundColor(.white)
-                            Text("+15")
+                            Text(movie.fields.rating)
                                 .font(.system(size: 14))
                                 .foregroundColor(.gray)
                         }
@@ -162,7 +205,7 @@ struct MoviesDetailsView: View {
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(.white)
                         
-                        Text("Synopsis. In 1947, Andy Dufresne (Tim Robbins), a banker in Maine, is convicted of murdering his wife and her lover, a golf pro. Since the state of Maine has no death penalty, he is given two consecutive life sentences and sent to the notoriously harsh Shawshank Prison.")
+                        Text(movie.fields.story)
                             .font(.system(size: 14))
                             .foregroundColor(.gray)
                             .lineSpacing(4)
@@ -177,7 +220,7 @@ struct MoviesDetailsView: View {
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.white)
                         
-                        Text("9.3 / 10")
+                        Text(String(format: "%.1f / 10", movie.fields.imdbRating))
                             .font(.system(size: 14))
                             .foregroundColor(.gray)
                     }
@@ -241,7 +284,7 @@ struct MoviesDetailsView: View {
                             .foregroundColor(.white)
                         
                         // Overall rating display
-                        Text("4.8")
+                        Text(String(format: "%.1f", movie.fields.imdbRating / 2))
                             .font(.system(size: 48, weight: .bold))
                             .foregroundColor(.white)
                         
@@ -253,27 +296,26 @@ struct MoviesDetailsView: View {
                     .padding(.top, 24)
                     
                     // MARK: Review Cards
-                    /// Horizontal scrollable review cards from users
+                    /// Horizontal scrollable review cards from API
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
-                            // First review card
-                            ReviewCard(
-                                profileImage: "reviewer1",
-                                reviewerName: "Afnan Abdullah",
-                                rating: 3,
-                                reviewText: "This is an engagingly simple, good-hearted film, with just enough darkness around the edges to give contrast and relief to its glowingly benign view of human nature.",
-                                date: "Tuesday"
-                            )
-                            
-                            // Second review card (partially visible)
-                            ReviewCard(
-                                profileImage: "reviewer2",
-                                reviewerName: "",
-                                rating: 0,
-                                reviewText: "A tough, compas...",
-                                date: ""
-                            )
-                            .frame(width: 80)
+                            if reviews.isEmpty {
+                                // Placeholder when no reviews
+                                Text("No reviews yet. Be the first!")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.gray)
+                                    .padding()
+                            } else {
+                                ForEach(reviews) { review in
+                                    ReviewCard(
+                                        profileImage: "",
+                                        reviewerName: "User",
+                                        rating: (review.fields.rate ?? 0) / 2,
+                                        reviewText: review.fields.reviewText ?? "",
+                                        date: formatDate(review.createdTime)
+                                    )
+                                }
+                            }
                         }
                         .padding(.horizontal, 16)
                     }
@@ -282,7 +324,7 @@ struct MoviesDetailsView: View {
                     // MARK: - Write Review Button
                     /// Call-to-action button for users to write their own review
                     Button(action: {
-                        // Write review action placeholder
+                        showWriteReview = true
                     }) {
                         HStack {
                             Image(systemName: "square.and.pencil")
@@ -305,6 +347,72 @@ struct MoviesDetailsView: View {
             }
         }
         .navigationBarHidden(true)
+        .task {
+            await loadReviews()
+            await checkBookmarkStatus()
+        }
+        .sheet(isPresented: $showWriteReview) {
+            WriteReviewSheet(movieId: movie.id, userId: currentUserId) {
+                Task {
+                    await loadReviews()
+                }
+            }
+        }
+    }
+    
+    // MARK: - API Functions
+    
+    /// Loads reviews from API
+    private func loadReviews() async {
+        do {
+            reviews = try await apiService.fetchMovieReviews(movieId: movie.id)
+        } catch {
+            print("Failed to load reviews: \(error)")
+        }
+    }
+    
+    /// Checks if movie is bookmarked
+    private func checkBookmarkStatus() async {
+        do {
+            savedMovieRecordId = try await apiService.checkIfMovieSaved(userId: currentUserId, movieId: movie.id)
+            isBookmarked = savedMovieRecordId != nil
+        } catch {
+            print("Failed to check bookmark: \(error)")
+        }
+    }
+    
+    /// Toggles bookmark state
+    private func toggleBookmark() async {
+        do {
+            if isBookmarked, let savedId = savedMovieRecordId {
+                try await apiService.unsaveMovie(savedMovieId: savedId)
+                isBookmarked = false
+                savedMovieRecordId = nil
+            } else {
+                let newSavedId = try await apiService.saveMovie(userId: currentUserId, movieId: movie.id)
+                isBookmarked = true
+                savedMovieRecordId = newSavedId
+            }
+        } catch {
+            print("Failed to toggle bookmark: \(error)")
+        }
+    }
+    
+    /// Formats ISO date to readable string
+    private func formatDate(_ isoDate: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        guard let date = formatter.date(from: isoDate) else { return "" }
+        
+        let calendar = Calendar.current
+        if let daysAgo = calendar.dateComponents([.day], from: date, to: Date()).day, daysAgo < 7 {
+            let dayFormatter = DateFormatter()
+            dayFormatter.dateFormat = "EEEE"
+            return dayFormatter.string(from: date)
+        }
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "MMM d"
+        return dateFormatter.string(from: date)
     }
 }
 
@@ -388,11 +496,144 @@ struct ReviewCard: View {
     }
 }
 
+// MARK: - Write Review Sheet
+/// Sheet view for writing a new review
+struct WriteReviewSheet: View {
+    let movieId: String
+    let userId: String
+    let onReviewPosted: () -> Void
+    
+    @Environment(\.dismiss) private var dismiss
+    @State private var reviewText: String = ""
+    @State private var rating: Int = 5
+    @State private var isSubmitting: Bool = false
+    
+    private let apiService = APIService()
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color.black.ignoresSafeArea()
+                
+                VStack(spacing: 24) {
+                    // Rating Selector
+                    VStack(spacing: 8) {
+                        Text("Your Rating")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.white)
+                        
+                        HStack(spacing: 8) {
+                            ForEach(1...5, id: \.self) { star in
+                                Image(systemName: star <= rating ? "star.fill" : "star")
+                                    .font(.system(size: 30))
+                                    .foregroundColor(.yellow)
+                                    .onTapGesture {
+                                        rating = star
+                                    }
+                            }
+                        }
+                    }
+                    
+                    // Review Text Field
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Your Review")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.white)
+                        
+                        TextEditor(text: $reviewText)
+                            .frame(height: 150)
+                            .padding(8)
+                            .background(Color.gray.opacity(0.2))
+                            .cornerRadius(8)
+                            .foregroundColor(.white)
+                            .scrollContentBackground(.hidden)
+                    }
+                    
+                    // Submit Button
+                    Button(action: {
+                        Task {
+                            await submitReview()
+                        }
+                    }) {
+                        if isSubmitting {
+                            ProgressView()
+                                .tint(.black)
+                        } else {
+                            Text("Submit Review")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(Color.yellow)
+                    .foregroundColor(.black)
+                    .cornerRadius(25)
+                    .disabled(reviewText.isEmpty || isSubmitting)
+                    .opacity(reviewText.isEmpty ? 0.5 : 1)
+                    
+                    Spacer()
+                }
+                .padding(24)
+            }
+            .navigationTitle("Write a Review")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .foregroundColor(.yellow)
+                }
+            }
+        }
+    }
+    
+    /// Submits the review to the API
+    private func submitReview() async {
+        isSubmitting = true
+        
+        do {
+            // Convert 1-5 rating to 1-10 for API
+            let apiRating = rating * 2
+            _ = try await apiService.postReview(
+                movieId: movieId,
+                userId: userId,
+                text: reviewText,
+                rating: apiRating
+            )
+            
+            await MainActor.run {
+                onReviewPosted()
+                dismiss()
+            }
+        } catch {
+            print("Failed to submit review: \(error)")
+            await MainActor.run {
+                isSubmitting = false
+            }
+        }
+    }
+}
+
 // MARK: - Preview
 /// Preview provider for SwiftUI canvas
 struct MoviesDetailsView_Previews: PreviewProvider {
     static var previews: some View {
-        MoviesDetailsView()
+        // Create a sample movie for preview
+        let sampleFields = MovieFields(
+            name: "The Shawshank Redemption",
+            poster: "https://i.imghippo.com/files/mHB5371A.jpg",
+            story: "Chronicles the experiences of a formerly successful banker as a prisoner in the gloomy jailhouse of Shawshank.",
+            runtime: "2h 22m",
+            genre: ["Drama"],
+            rating: "R",
+            imdbRating: 9.3,
+            language: ["English"],
+            actors: ["Tim Robbins", "Morgan Freeman"]
+        )
+        let sampleMovie = MovieRecord(id: "recfNj1e4waOUJLxd", fields: sampleFields)
+        
+        MoviesDetailsView(movie: sampleMovie)
             .preferredColorScheme(.dark)
     }
 }
