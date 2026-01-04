@@ -8,10 +8,80 @@
 
 import Foundation
 
+// MARK: - Actor Models
+struct ActorResponse: Codable {
+    let records: [ActorRecord]
+}
+
+struct ActorRecord: Codable, Identifiable {
+    let id: String
+    let fields: ActorFields
+}
+
+struct ActorFields: Codable {
+    let name: String
+    let image: String?
+}
+
+// MARK: - Director Models
+struct DirectorResponse: Codable {
+    let records: [DirectorRecord]
+}
+
+struct DirectorRecord: Codable, Identifiable {
+    let id: String
+    let fields: DirectorFields
+}
+
+struct DirectorFields: Codable {
+    let name: String
+    let image: String?
+}
+
 class APIService {
     
     private let baseURL = "https://api.airtable.com/v0/appsfcB6YESLj4NCN"
     private let token = "Bearer pat7E88yW3dgzlY61.2b7d03863aca9f1262dcb772f7728bd157e695799b43c7392d5faf4f52fcb001"
+    
+    // MARK: - Fetch Actors
+    func fetchActors() async throws -> [ActorRecord] {
+        guard let url = URL(string: "\(baseURL)/actors") else {
+            throw URLError(.badURL)
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue(token, forHTTPHeaderField: "Authorization")
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        
+        let decoded = try JSONDecoder().decode(ActorResponse.self, from: data)
+        return decoded.records
+    }
+    
+    // MARK: - Fetch Directors
+    func fetchDirectors() async throws -> [DirectorRecord] {
+        guard let url = URL(string: "\(baseURL)/directors") else {
+            throw URLError(.badURL)
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue(token, forHTTPHeaderField: "Authorization")
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        
+        let decoded = try JSONDecoder().decode(DirectorResponse.self, from: data)
+        return decoded.records
+    }
     
     func fetchMovies() async throws -> [MovieRecord] {
         guard let url = URL(string: "\(baseURL)/movies") else {
@@ -32,7 +102,7 @@ class APIService {
         return decoded.records
     }
     // MARK: - ADD YOUR FUNCTIONS BELOW THIS
-    // ‚úÖ View profile (name, email, profile image, saved movies) using email
+    // ✅ View profile (name, email, profile image, saved movies) using email
     func fetchProfileByEmail(email: String) async throws
     -> (user: UserRecord, savedMovies: [MovieRecord]) {
         
@@ -59,14 +129,14 @@ class APIService {
             throw URLError(.cannotParseResponse)
         }
         
-        // üëâ PUT THIS LINE RIGHT HERE
+        // 👉 PUT THIS LINE RIGHT HERE
         let savedMovies = try await fetchSavedMovies(userRecordID: user.id)
         
         // 3) return both
         return (user: user, savedMovies: savedMovies)
     }
     
-    // ‚úÖ Fetch saved movies for a user (by Airtable user record id)
+    // ✅ Fetch saved movies for a user (by Airtable user record id)
     func fetchSavedMovies(userRecordID: String) async throws -> [MovieRecord] {
         
         // 1) Get rows from saved_movies for this user
@@ -194,16 +264,31 @@ class APIService {
         request.setValue(token, forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
+        // ⭐️ FIXED: Both user_id and movie_id must be arrays for linked records in Airtable
         let body: [String: Any] = [
             "fields": [
-                "user_id": userId,
-                "movie_id": movieId
+                "user_id": [userId],    // ⭐️ Array for linked record
+                "movie_id": [movieId]   // ⭐️ Array for linked record
             ]
         ]
         
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         
+        // ⭐️ DEBUG: Print what we're sending
+        print("DEBUG saveMovie - userId: \(userId)")
+        print("DEBUG saveMovie - movieId: \(movieId)")
+        print("DEBUG saveMovie - body: \(body)")
+        
         let (data, response) = try await URLSession.shared.data(for: request)
+        
+        // ⭐️ DEBUG: Print the response
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("DEBUG saveMovie - response: \(responseString)")
+        }
+        
+        if let httpResponse = response as? HTTPURLResponse {
+            print("DEBUG saveMovie - status code: \(httpResponse.statusCode)")
+        }
         
         guard (response as? HTTPURLResponse)?.statusCode == 200 else {
             throw URLError(.badServerResponse)
@@ -270,9 +355,3 @@ class APIService {
     }
 
 }
-
-    
-    
-    
-    
-

@@ -8,41 +8,44 @@
 import SwiftUI
 
 // MARK: - Main View
-/// The main movie details view that displays comprehensive information about a movie
-/// including cover image, metadata, synopsis, director, cast, and user reviews
 struct MoviesDetailsView: View {
     
     // MARK: - Properties
-    /// The movie record passed from the previous screen
     let movie: MovieRecord
+    let signedInEmail: String
     
     // MARK: - State Properties
-    /// Controls whether the movie is bookmarked/saved
     @State private var isBookmarked: Bool = false
-    
-    /// Stores the saved_movies record ID if bookmarked
     @State private var savedMovieRecordId: String?
-    
-    /// Reviews loaded from API
     @State private var reviews: [ReviewRecord] = []
+    @State private var currentUserId: String = ""
     
-    /// Controls whether the write review sheet is presented
-    @State private var showWriteReview: Bool = false
+    // ⭐️ NEW: Actors and Directors from API
+    @State private var allActors: [ActorRecord] = []
+    @State private var allDirectors: [DirectorRecord] = []
     
-    /// Environment variable to handle navigation back
     @Environment(\.dismiss) private var dismiss
     
-    /// API Service instance
     private let apiService = APIService()
     
-    /// Current user ID (in real app, get from authentication)
-    /// ⚠️ Replace with actual user ID from your auth system
-    private let currentUserId = "recPRxIRAyyvQxfkP"
+    // ⭐️ Computed: Get actors for this movie by matching names
+    private var movieActors: [ActorRecord] {
+        guard let actorNames = movie.fields.actors else { return [] }
+        return allActors.filter { actor in
+            actorNames.contains(actor.fields.name)
+        }
+    }
+    
+    // ⭐️ Computed: Get director for this movie (first match or all)
+    // Note: You may need to add a "director" field to MovieFields if you have it
+    private var movieDirectors: [DirectorRecord] {
+        // For now, show first director as placeholder
+        // Update this logic when you have director linked to movies
+        return Array(allDirectors.prefix(1))
+    }
     
     var body: some View {
         ZStack {
-            // MARK: Background
-            /// Dark background color for the entire view
             Color.black
                 .ignoresSafeArea()
             
@@ -50,9 +53,7 @@ struct MoviesDetailsView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     
                     // MARK: - Hero Image Section
-                    /// Movie cover image with gradient overlay and navigation buttons
                     ZStack(alignment: .top) {
-                        // Movie poster image from API
                         AsyncImage(url: URL(string: movie.fields.poster)) { phase in
                             switch phase {
                             case .empty:
@@ -80,7 +81,6 @@ struct MoviesDetailsView: View {
                             }
                         }
                         
-                        // Gradient overlay for better text readability
                         LinearGradient(
                             gradient: Gradient(colors: [
                                 .clear,
@@ -94,9 +94,7 @@ struct MoviesDetailsView: View {
                         .frame(height: 444)
                         
                         // MARK: Navigation Bar
-                        /// Top navigation with back button, share, and bookmark
                         HStack {
-                            // Back button
                             Button(action: {
                                 dismiss()
                             }) {
@@ -110,9 +108,8 @@ struct MoviesDetailsView: View {
                             
                             Spacer()
                             
-                            // Share button
                             Button(action: {
-                                // Share action placeholder
+                                shareMovie()
                             }) {
                                 Image(systemName: "square.and.arrow.up")
                                     .font(.system(size: 18, weight: .medium))
@@ -120,7 +117,6 @@ struct MoviesDetailsView: View {
                             }
                             .padding(.trailing, 16)
                             
-                            // Bookmark button
                             Button(action: {
                                 Task {
                                     await toggleBookmark()
@@ -132,10 +128,8 @@ struct MoviesDetailsView: View {
                             }
                         }
                         .padding(.horizontal, 16)
-                        .padding(.top, 50) // Account for status bar
+                        .padding(.top, 50)
                         
-                        // MARK: Movie Title Overlay
-                        /// Movie title positioned at the bottom of the hero image
                         VStack(alignment: .leading) {
                             Spacer()
                             Text(movie.fields.name)
@@ -148,9 +142,7 @@ struct MoviesDetailsView: View {
                     }
                     
                     // MARK: - Movie Metadata Section
-                    /// Duration, Language, Genre, and Age rating in a grid layout
                     HStack(alignment: .top, spacing: 40) {
-                        // Duration
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Duration")
                                 .font(.system(size: 14, weight: .medium))
@@ -160,7 +152,6 @@ struct MoviesDetailsView: View {
                                 .foregroundColor(.gray)
                         }
                         
-                        // Language
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Language")
                                 .font(.system(size: 14, weight: .medium))
@@ -174,7 +165,6 @@ struct MoviesDetailsView: View {
                     .padding(.top, 16)
                     
                     HStack(alignment: .top, spacing: 40) {
-                        // Genre
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Genre")
                                 .font(.system(size: 14, weight: .medium))
@@ -185,7 +175,6 @@ struct MoviesDetailsView: View {
                         }
                         .frame(width: 100, alignment: .leading)
                         
-                        // Age Rating
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Age")
                                 .font(.system(size: 14, weight: .medium))
@@ -199,7 +188,6 @@ struct MoviesDetailsView: View {
                     .padding(.top, 16)
                     
                     // MARK: - Story Section
-                    /// Movie synopsis/description
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Story")
                             .font(.system(size: 18, weight: .semibold))
@@ -214,7 +202,6 @@ struct MoviesDetailsView: View {
                     .padding(.top, 24)
                     
                     // MARK: - IMDb Rating Section
-                    /// IMDb rating display with underlined label
                     VStack(alignment: .leading, spacing: 4) {
                         Text("IMDb Rating")
                             .font(.system(size: 16, weight: .semibold))
@@ -234,40 +221,57 @@ struct MoviesDetailsView: View {
                         .padding(.horizontal, 16)
                         .padding(.top, 16)
                     
-                    // MARK: - Director Section
-                    /// Director information displayed as a single image asset
+                    // MARK: - Director Section (FROM API)
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Director")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.white)
                         
-                        // Director image asset (already contains circular photo + name)
-                        Image("Director")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 346, height: 100)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 16) {
+                                if movieDirectors.isEmpty {
+                                    Text("No director info")
+                                        .foregroundColor(.gray)
+                                        .font(.system(size: 14))
+                                } else {
+                                    ForEach(movieDirectors) { director in
+                                        PersonCard(
+                                            name: director.fields.name,
+                                            imageURL: director.fields.image
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
-                    .frame(width: 346, height: 134, alignment: .topLeading)
-                    .padding(.horizontal, 17)
+                    .padding(.horizontal, 16)
                     .padding(.top, 16)
                     
-                    // MARK: - Stars Section
-                    /// Cast members displayed as a single image asset
+                    // MARK: - Stars Section (FROM API)
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Stars")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.white)
                         
-                        // Stars image asset (already contains circular photos + names)
-                        Image("Stars")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 346, height: 100)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 16) {
+                                if movieActors.isEmpty {
+                                    Text("No cast info")
+                                        .foregroundColor(.gray)
+                                        .font(.system(size: 14))
+                                } else {
+                                    ForEach(movieActors) { actor in
+                                        PersonCard(
+                                            name: actor.fields.name,
+                                            imageURL: actor.fields.image
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
-                    .frame(width: 346, height: 134, alignment: .topLeading)
-                    .padding(.horizontal, 17)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
                     
                     // Divider line
                     Rectangle()
@@ -277,13 +281,11 @@ struct MoviesDetailsView: View {
                         .padding(.top, 16)
                     
                     // MARK: - Rating & Reviews Section
-                    /// User ratings and review cards
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Rating & Reviews")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.white)
                         
-                        // Overall rating display
                         Text(String(format: "%.1f", movie.fields.imdbRating / 2))
                             .font(.system(size: 48, weight: .bold))
                             .foregroundColor(.white)
@@ -296,11 +298,9 @@ struct MoviesDetailsView: View {
                     .padding(.top, 24)
                     
                     // MARK: Review Cards
-                    /// Horizontal scrollable review cards from API
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
                             if reviews.isEmpty {
-                                // Placeholder when no reviews
                                 Text("No reviews yet. Be the first!")
                                     .font(.system(size: 14))
                                     .foregroundColor(.gray)
@@ -322,10 +322,7 @@ struct MoviesDetailsView: View {
                     .padding(.top, 16)
                     
                     // MARK: - Write Review Button
-                    /// Call-to-action button for users to write their own review
-                    Button(action: {
-                        showWriteReview = true
-                    }) {
+                    NavigationLink(value: "writeReview") {
                         HStack {
                             Image(systemName: "square.and.pencil")
                                 .font(.system(size: 16))
@@ -348,21 +345,36 @@ struct MoviesDetailsView: View {
         }
         .navigationBarHidden(true)
         .task {
-            await loadReviews()
-            await checkBookmarkStatus()
-        }
-        .sheet(isPresented: $showWriteReview) {
-            WriteReviewSheet(movieId: movie.id, userId: currentUserId) {
-                Task {
-                    await loadReviews()
-                }
-            }
+            await loadAllData()
         }
     }
     
     // MARK: - API Functions
     
-    /// Loads reviews from API
+    private func loadAllData() async {
+        // Load actors and directors first
+        do {
+            async let actorsTask = apiService.fetchActors()
+            async let directorsTask = apiService.fetchDirectors()
+            
+            allActors = try await actorsTask
+            allDirectors = try await directorsTask
+        } catch {
+            print("Failed to load actors/directors: \(error)")
+        }
+        
+        // Load user data
+        do {
+            let result = try await apiService.fetchProfileByEmail(email: signedInEmail)
+            currentUserId = result.user.id
+            
+            await loadReviews()
+            await checkBookmarkStatus()
+        } catch {
+            print("Failed to load user: \(error)")
+        }
+    }
+    
     private func loadReviews() async {
         do {
             reviews = try await apiService.fetchMovieReviews(movieId: movie.id)
@@ -371,8 +383,8 @@ struct MoviesDetailsView: View {
         }
     }
     
-    /// Checks if movie is bookmarked
     private func checkBookmarkStatus() async {
+        guard !currentUserId.isEmpty else { return }
         do {
             savedMovieRecordId = try await apiService.checkIfMovieSaved(userId: currentUserId, movieId: movie.id)
             isBookmarked = savedMovieRecordId != nil
@@ -381,8 +393,12 @@ struct MoviesDetailsView: View {
         }
     }
     
-    /// Toggles bookmark state
     private func toggleBookmark() async {
+        guard !currentUserId.isEmpty else {
+            print("No user ID - cannot save movie")
+            return
+        }
+        
         do {
             if isBookmarked, let savedId = savedMovieRecordId {
                 try await apiService.unsaveMovie(savedMovieId: savedId)
@@ -398,7 +414,16 @@ struct MoviesDetailsView: View {
         }
     }
     
-    /// Formats ISO date to readable string
+    private func shareMovie() {
+        let shareText = "Check out \(movie.fields.name)!"
+        let activityVC = UIActivityViewController(activityItems: [shareText], applicationActivities: nil)
+        
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootVC = windowScene.windows.first?.rootViewController {
+            rootVC.present(activityVC, animated: true)
+        }
+    }
+    
     private func formatDate(_ isoDate: String) -> String {
         let formatter = ISO8601DateFormatter()
         guard let date = formatter.date(from: isoDate) else { return "" }
@@ -416,28 +441,69 @@ struct MoviesDetailsView: View {
     }
 }
 
-// MARK: - Supporting Views
+// MARK: - Person Card (for Directors & Actors)
+struct PersonCard: View {
+    let name: String
+    let imageURL: String?
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            if let imageURL = imageURL, let url = URL(string: imageURL) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .empty:
+                        Circle()
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(width: 70, height: 70)
+                            .overlay(ProgressView().tint(.white))
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 70, height: 70)
+                            .clipShape(Circle())
+                    case .failure:
+                        Circle()
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(width: 70, height: 70)
+                            .overlay(
+                                Image(systemName: "person.fill")
+                                    .foregroundColor(.gray)
+                            )
+                    @unknown default:
+                        EmptyView()
+                    }
+                }
+            } else {
+                Circle()
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: 70, height: 70)
+                    .overlay(
+                        Image(systemName: "person.fill")
+                            .foregroundColor(.gray)
+                    )
+            }
+            
+            Text(name)
+                .font(.system(size: 12))
+                .foregroundColor(.white)
+                .lineLimit(1)
+                .frame(width: 80)
+        }
+    }
+}
 
-/// A card component for displaying user reviews
-/// Contains reviewer info, star rating, review text, and date
+// MARK: - Review Card
 struct ReviewCard: View {
-    /// The image asset name for reviewer's profile picture
     let profileImage: String
-    /// The reviewer's display name
     let reviewerName: String
-    /// The star rating (1-5)
     let rating: Int
-    /// The review text content
     let reviewText: String
-    /// The date when the review was posted
     let date: String
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // MARK: Reviewer Header
-            /// Profile picture, name, and star rating
             HStack(spacing: 10) {
-                // Reviewer profile image
                 Circle()
                     .fill(Color.yellow.opacity(0.3))
                     .frame(width: 40, height: 40)
@@ -446,7 +512,6 @@ struct ReviewCard: View {
                             .foregroundColor(.yellow)
                     )
                 
-                // Reviewer name and rating
                 VStack(alignment: .leading, spacing: 2) {
                     if !reviewerName.isEmpty {
                         Text(reviewerName)
@@ -454,7 +519,6 @@ struct ReviewCard: View {
                             .foregroundColor(.white)
                     }
                     
-                    // Star rating display
                     if rating > 0 {
                         HStack(spacing: 2) {
                             ForEach(0..<5) { index in
@@ -467,16 +531,12 @@ struct ReviewCard: View {
                 }
             }
             
-            // MARK: Review Text
-            /// The actual review content
             Text(reviewText)
                 .font(.system(size: 13))
                 .foregroundColor(.gray)
                 .lineSpacing(4)
                 .fixedSize(horizontal: false, vertical: true)
             
-            // MARK: Date
-            /// When the review was posted
             if !date.isEmpty {
                 Spacer()
                 HStack {
@@ -496,130 +556,9 @@ struct ReviewCard: View {
     }
 }
 
-// MARK: - Write Review Sheet
-/// Sheet view for writing a new review
-struct WriteReviewSheet: View {
-    let movieId: String
-    let userId: String
-    let onReviewPosted: () -> Void
-    
-    @Environment(\.dismiss) private var dismiss
-    @State private var reviewText: String = ""
-    @State private var rating: Int = 5
-    @State private var isSubmitting: Bool = false
-    
-    private let apiService = APIService()
-    
-    var body: some View {
-        NavigationView {
-            ZStack {
-                Color.black.ignoresSafeArea()
-                
-                VStack(spacing: 24) {
-                    // Rating Selector
-                    VStack(spacing: 8) {
-                        Text("Your Rating")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.white)
-                        
-                        HStack(spacing: 8) {
-                            ForEach(1...5, id: \.self) { star in
-                                Image(systemName: star <= rating ? "star.fill" : "star")
-                                    .font(.system(size: 30))
-                                    .foregroundColor(.yellow)
-                                    .onTapGesture {
-                                        rating = star
-                                    }
-                            }
-                        }
-                    }
-                    
-                    // Review Text Field
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Your Review")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.white)
-                        
-                        TextEditor(text: $reviewText)
-                            .frame(height: 150)
-                            .padding(8)
-                            .background(Color.gray.opacity(0.2))
-                            .cornerRadius(8)
-                            .foregroundColor(.white)
-                            .scrollContentBackground(.hidden)
-                    }
-                    
-                    // Submit Button
-                    Button(action: {
-                        Task {
-                            await submitReview()
-                        }
-                    }) {
-                        if isSubmitting {
-                            ProgressView()
-                                .tint(.black)
-                        } else {
-                            Text("Submit Review")
-                                .font(.system(size: 16, weight: .semibold))
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                    .background(Color.yellow)
-                    .foregroundColor(.black)
-                    .cornerRadius(25)
-                    .disabled(reviewText.isEmpty || isSubmitting)
-                    .opacity(reviewText.isEmpty ? 0.5 : 1)
-                    
-                    Spacer()
-                }
-                .padding(24)
-            }
-            .navigationTitle("Write a Review")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                    .foregroundColor(.yellow)
-                }
-            }
-        }
-    }
-    
-    /// Submits the review to the API
-    private func submitReview() async {
-        isSubmitting = true
-        
-        do {
-            // Convert 1-5 rating to 1-10 for API
-            let apiRating = rating * 2
-            _ = try await apiService.postReview(
-                movieId: movieId,
-                userId: userId,
-                text: reviewText,
-                rating: apiRating
-            )
-            
-            await MainActor.run {
-                onReviewPosted()
-                dismiss()
-            }
-        } catch {
-            print("Failed to submit review: \(error)")
-            await MainActor.run {
-                isSubmitting = false
-            }
-        }
-    }
-}
-
 // MARK: - Preview
-/// Preview provider for SwiftUI canvas
 struct MoviesDetailsView_Previews: PreviewProvider {
     static var previews: some View {
-        // Create a sample movie for preview
         let sampleFields = MovieFields(
             name: "The Shawshank Redemption",
             poster: "https://i.imghippo.com/files/mHB5371A.jpg",
@@ -633,7 +572,9 @@ struct MoviesDetailsView_Previews: PreviewProvider {
         )
         let sampleMovie = MovieRecord(id: "recfNj1e4waOUJLxd", fields: sampleFields)
         
-        MoviesDetailsView(movie: sampleMovie)
-            .preferredColorScheme(.dark)
+        NavigationStack {
+            MoviesDetailsView(movie: sampleMovie, signedInEmail: "Noora@gmail.com")
+        }
+        .preferredColorScheme(.dark)
     }
 }

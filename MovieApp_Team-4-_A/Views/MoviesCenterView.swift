@@ -40,6 +40,16 @@ struct MoviesCenterView: View {
                     }
                 }
             }
+            // ⭐️ ADDED: Navigation destination for MovieRecord -> MoviesDetailsView
+            .navigationDestination(for: MovieRecord.self) { movie in
+                MoviesDetailsView(movie: movie, signedInEmail: signedInEmail)
+            }
+            // ⭐️ ADDED: Navigation destination for String -> WriteReviewView
+            .navigationDestination(for: String.self) { value in
+                if value == "writeReview" {
+                    WriteReviewView()
+                }
+            }
         }
         .task {
             await viewModel.loadMovies()
