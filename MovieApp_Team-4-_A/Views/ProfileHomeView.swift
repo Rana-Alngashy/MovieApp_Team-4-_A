@@ -3,11 +3,12 @@ import PhotosUI
 
 // ✅ Profile Home (with working Sign Out)
 struct ProfileHomeView: View {
+ 
 
     @Binding var isAuthenticated: Bool        // ✅ for sign out
     @Binding var signedInEmail: String        // ✅ optional: clear email on sign out
 
-    @StateObject private var vm = ProfileViewModel()
+    @EnvironmentObject var vm: ProfileViewModel
     @Environment(\.dismiss) var dismiss
 
     var body: some View {

@@ -6,6 +6,7 @@ struct MoviesCenterView: View {
     @Binding var signedInEmail: String
 
     @StateObject private var viewModel = MovieViewModel()
+    @EnvironmentObject var profileVM: ProfileViewModel
 
     var body: some View {
         NavigationStack {
@@ -53,7 +54,12 @@ struct MoviesCenterView: View {
         }
         .task {
             await viewModel.loadMovies()
+
+            if profileVM.email != signedInEmail {
+                await profileVM.loadProfile(email: signedInEmail)
+            }
         }
+
     }
 
     private var header: some View {
@@ -61,25 +67,36 @@ struct MoviesCenterView: View {
             Text("Movies Center")
                 .font(.largeTitle.bold())
                 .foregroundColor(.white)
-
+            
             Spacer()
-
             NavigationLink {
                 ProfileHomeView(
                     isAuthenticated: $isAuthenticated,
                     signedInEmail: $signedInEmail
                 )
             } label: {
-                Image(systemName: "person.crop.circle")
-                    .resizable()
+                if let url = URL(string: profileVM.profileImage),
+                   !profileVM.profileImage.isEmpty {
+                    
+                    AsyncImage(url: url) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: {
+                        ProgressView()
+                    }
                     .frame(width: 32, height: 32)
-                    .foregroundColor(.white)
+                    .clipShape(Circle())
+                    
+                } else {
+                    Image(systemName: "person.crop.circle")
+                        .resizable()
+                        .frame(width: 32, height: 32)
+                        .foregroundColor(.white)
+                }
             }
+            .padding(.horizontal)
+            .padding(.top)
         }
-        .padding(.horizontal)
-        .padding(.top)
     }
-
     private var searchBar: some View {
         HStack {
             Image(systemName: "magnifyingglass")
