@@ -1,9 +1,9 @@
 //
 //  MovieHorizontalRow.swift
-//  Movies
+//  MovieApp_Team-4-_A
 //
-//  Created by Rana Alngashy on 08/07/1447 AH.
-//
+//  Created by Rana Alngashy on 16/07/1447 AH.
+
 import SwiftUI
 
 struct MovieHorizontalRow: View {
@@ -13,7 +13,6 @@ struct MovieHorizontalRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Header: Title and Show More alignment
             HStack(alignment: .firstTextBaseline) {
                 Text(title)
                     .font(.system(size: 24, weight: .bold))
@@ -22,31 +21,31 @@ struct MovieHorizontalRow: View {
                 Spacer()
                 
                 if !isLarge {
-                    Button("Show more") {}
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(Color(.gold1))
+                    // ✅ Updated: Now uses NavigationLink instead of an empty Button
+                    NavigationLink(value: title) {
+                        Text("Show more")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(Color(.gold1))
+                    }
                 }
             }
             .padding(.horizontal)
 
             if isLarge {
-                // The dots count is automatic based on movies.count
                 TabView {
                     ForEach(movies) { movie in
-                        // ⭐️ ADDED: NavigationLink with value for NavigationStack
                         NavigationLink(value: movie) {
                             MovieCard(movie: movie, isLarge: true)
                         }
                         .buttonStyle(PlainButtonStyle())
                     }
                 }
-                .frame(height: 460) // Enough space for image + dots
+                .frame(height: 460)
                 .tabViewStyle(.page(indexDisplayMode: .always))
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
                         ForEach(movies) { movie in
-                            // ⭐️ ADDED: NavigationLink with value for NavigationStack
                             NavigationLink(value: movie) {
                                 MovieCard(movie: movie, isLarge: false)
                             }

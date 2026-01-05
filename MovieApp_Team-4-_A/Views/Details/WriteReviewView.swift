@@ -4,20 +4,28 @@
 //
 //  Created by Rana Alngashy on 04/07/1447 AH.
 //
-
 import SwiftUI
 
 struct WriteReviewView: View {
     @Environment(\.dismiss) var dismiss
+
+    // ✅ REQUIRED to post review
+    let movieId: String
+    let userId: String
+
     @State private var reviewText: String = ""
     @State private var rating: Int = 0
-    
-    // Using the gold color consistent with your design
+
+    // Brand color
     let brandGold = Color(red: 0.9, green: 0.7, blue: 0.2)
-    
+
+    // ✅ API
+    private let apiService = APIService()
+
     var body: some View {
         VStack(spacing: 0) {
-            // --- CUSTOM HEADER (No Glass) ---
+
+            // --- HEADER ---
             HStack {
                 Button(action: { dismiss() }) {
                     HStack(spacing: 4) {
@@ -26,37 +34,47 @@ struct WriteReviewView: View {
                     }
                     .foregroundColor(brandGold)
                 }
-                
+
                 Spacer()
-                
+
                 Text("Write a review")
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(.white)
-                
+
                 Spacer()
-                
-                Button(action: {
-                    // Logic to add review to movie will go here tomorrow
-                    print("Review Added: \(reviewText), Rating: \(rating)")
-                    dismiss()
-                }) {
+
+                // ✅ ADD REVIEW BUTTON (FIXED)
+                Button {
+                    Task {
+                        do {
+                            try await apiService.postReview(
+                                movieId: movieId,
+                                userId: userId,
+                                text: reviewText,
+                                rating: rating * 2 // ⭐️ 1–5 UI → 1–10 Airtable
+                            )
+                            dismiss()
+                        } catch {
+                            print("❌ Failed to post review:", error)
+                        }
+                    }
+                } label: {
                     Text("Add")
                         .foregroundColor(brandGold)
                 }
             }
             .padding()
             .background(Color.black)
-            
-            // --- THE SMALL WHITE LINE ---
+
             Divider()
                 .background(Color.white.opacity(0.3))
-            
+
+            // --- CONTENT ---
             VStack(alignment: .leading, spacing: 20) {
                 Text("Review")
                     .foregroundColor(.white)
                     .font(.headline)
-                
-                // --- CUSTOM TEXT EDITOR ---
+
                 ZStack(alignment: .topLeading) {
                     if reviewText.isEmpty {
                         Text("Enter your review")
@@ -64,24 +82,24 @@ struct WriteReviewView: View {
                             .padding(.horizontal, 12)
                             .padding(.vertical, 12)
                     }
-                    
+
                     TextEditor(text: $reviewText)
                         .padding(8)
                         .foregroundColor(.white)
-                        .scrollContentBackground(.hidden) // Required to show custom background
+                        .scrollContentBackground(.hidden)
                         .background(Color(white: 0.12))
                         .cornerRadius(12)
                         .frame(height: 180)
                 }
-                
-                // --- RATING SYSTEM ---
+
+                // --- RATING ---
                 HStack {
                     Text("Rating")
                         .foregroundColor(.white)
                         .font(.headline)
-                    
+
                     Spacer()
-                    
+
                     HStack(spacing: 8) {
                         ForEach(1...5, id: \.self) { index in
                             Image(systemName: index <= rating ? "star.fill" : "star")
@@ -93,8 +111,7 @@ struct WriteReviewView: View {
                         }
                     }
                 }
-                .padding(.top, 10)
-                
+
                 Spacer()
             }
             .padding()
@@ -102,7 +119,4 @@ struct WriteReviewView: View {
         .background(Color.black.ignoresSafeArea())
         .navigationBarHidden(true)
     }
-}
-#Preview {
-    WriteReviewView()
 }

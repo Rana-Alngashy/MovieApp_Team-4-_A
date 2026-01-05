@@ -1,28 +1,25 @@
-//
-//  ReviewModel.swift
-//  MovieApp_Team-4-_A
-//
-//  Created by Danyah ALbarqawi on 01/01/2026.
-//
 
 import Foundation
 
-// MARK: - Review Response
-struct ReviewResponse: Codable {
+enum AppRoute: Hashable {
+    case writeReview(movieId: String, userId: String)
+    case genre(String)
+}
+
+
+struct ReviewResponse: Codable, Sendable { // Added Sendable
     let records: [ReviewRecord]
 }
 
-// MARK: - Review Record
-struct ReviewRecord: Codable, Identifiable {
+struct ReviewRecord: Codable, Identifiable, Sendable { // Added Sendable
     let id: String
     let createdTime: String
     let fields: ReviewFields
 }
 
-// MARK: - Review Fields
-struct ReviewFields: Codable {
+struct ReviewFields: Codable, Sendable { // Added Sendable
     let reviewText: String?
-    let rate: Double?  // ⭐️ FIXED: Changed from Int to Double
+    let rate: Double?
     let movieId: String?
     let userId: String?
     

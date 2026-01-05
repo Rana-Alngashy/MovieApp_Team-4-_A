@@ -1,18 +1,11 @@
-//
-//  Models.swift
-//  Movies
-//
-//  Created by Rana Alngashy on 08/07/1447 AH.
-//
-
 
 import Foundation
 
-struct MovieResponse: Codable {
+struct MovieResponse: Codable, Sendable { // Added Sendable
     let records: [MovieRecord]
 }
 
-struct MovieRecord: Codable, Identifiable, Hashable {
+struct MovieRecord: Codable, Identifiable, Hashable, Sendable { // Added Sendable
     let id: String
     let fields: MovieFields
     
@@ -25,7 +18,7 @@ struct MovieRecord: Codable, Identifiable, Hashable {
     }
 }
 
-struct MovieFields: Codable {
+struct MovieFields: Codable, Sendable { // Added Sendable
     let name: String
     let poster: String
     let story: String
@@ -34,44 +27,26 @@ struct MovieFields: Codable {
     let rating: String
     let imdbRating: Double
     let language: [String]
-    let actors: [String]? // ⭐️ Added this field
+    let actors: [String]?
 
     enum CodingKeys: String, CodingKey {
         case name, poster, story, runtime, genre, rating, language, actors
         case imdbRating = "IMDb_rating"
     }
 }
-struct UserResponse: Codable { let records: [UserRecord] }
 
-struct UserRecord: Codable, Identifiable {
-    let id: String
-    let fields: UserFields
+struct SavedMoviesResponse: Codable, Sendable { // Added Sendable
+    let records: [SavedMovieRecord]
 }
 
-struct UserFields: Codable {
-    let name: String?
-    let email: String
-    let password: String?
-    let profileImage: String?
-
-    enum CodingKeys: String, CodingKey {
-        case name, email, password
-        case profileImage = "profile_image"
-    }
-}
-
-struct SavedMoviesResponse: Codable { let records: [SavedMovieRecord] }
-
-struct SavedMovieRecord: Codable, Identifiable {
+struct SavedMovieRecord: Codable, Identifiable, Sendable { // Added Sendable
     let id: String
     let fields: SavedMovieFields
 }
 
-struct SavedMovieFields: Codable {
+struct SavedMovieFields: Codable, Sendable { // Added Sendable
     let userID: String
     let movieID: [String]
-    
-    
 
     enum CodingKeys: String, CodingKey {
         case userID = "user_id"

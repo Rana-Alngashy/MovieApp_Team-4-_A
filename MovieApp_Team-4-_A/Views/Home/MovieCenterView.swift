@@ -1,3 +1,9 @@
+//
+//  MovieCenterView.swift
+//  MovieApp_Team-4-_A
+//
+//  Created by Rana Alngashy on 16/07/1447 AH.
+//
 import SwiftUI
 
 struct MoviesCenterView: View {
@@ -46,11 +52,22 @@ struct MoviesCenterView: View {
                 MoviesDetailsView(movie: movie, signedInEmail: signedInEmail)
             }
             // ⭐️ ADDED: Navigation destination for String -> WriteReviewView
-            .navigationDestination(for: String.self) { value in
-                if value == "writeReview" {
-                    WriteReviewView()
+            .navigationDestination(for: AppRoute.self) { route in
+                switch route {
+
+                case .writeReview(let movieId, let userId):
+                    WriteReviewView(
+                        movieId: movieId,
+                        userId: userId
+                    )
+
+                case .genre(let genre):
+                    let genreMovies = viewModel.moviesByGenre[genre] ?? []
+                    MovieGridView(title: genre, movies: genreMovies)
                 }
             }
+
+
         }
         .task {
             await viewModel.loadMovies()
@@ -62,7 +79,8 @@ struct MoviesCenterView: View {
 
     }
 
-    private var header: some View {
+
+private var header: some View {
         HStack {
             Text("Movies Center")
                 .font(.largeTitle.bold())
@@ -97,7 +115,7 @@ struct MoviesCenterView: View {
             .padding(.top)
         }
     }
-    private var searchBar: some View {
+private var searchBar: some View {
         HStack {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.gray)
@@ -114,7 +132,6 @@ struct MoviesCenterView: View {
     }
 }
 
-// ⭐️ YOUR ORIGINAL MOVIE CARD RESTORED
 struct MovieCard: View {
     let movie: MovieRecord
     var isLarge: Bool = false
@@ -122,6 +139,7 @@ struct MovieCard: View {
     var body: some View {
         if isLarge {
             ZStack(alignment: .bottomLeading) {
+                // 1. The Main Poster Image
                 AsyncImage(url: URL(string: movie.fields.poster)) { image in
                     image.resizable().aspectRatio(contentMode: .fill)
                 } placeholder: {
@@ -131,6 +149,16 @@ struct MovieCard: View {
                 .cornerRadius(12)
                 .clipped()
 
+                // 2. The Gradient Shade (Moved here to cover the full width)
+                LinearGradient(
+                    gradient: Gradient(colors: [.clear, .black.opacity(0.9)]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(width: UIScreen.main.bounds.width - 32, height: 200) // Adjust height as needed
+                .cornerRadius(12)
+
+                // 3. The Text Content
                 VStack(alignment: .leading, spacing: 4) {
                     Text(movie.fields.name)
                         .font(.system(size: 38, weight: .bold))
@@ -143,44 +171,36 @@ struct MovieCard: View {
                                 .foregroundColor(Color(.gold1))
                         }
                     }
-
                     HStack(spacing: 5) {
-                        Text(String(format: "%.1f", movie.fields.imdbRating / 2))
-                            .font(.system(size: 20, weight: .bold))
-                        Text("out of 5")
-                            .font(.system(size: 14))
-                            .foregroundColor(.white.opacity(0.9))
-                    }
-                    .foregroundColor(.white)
+                                            Text(String(format: "%.1f", movie.fields.imdbRating / 2))
+                                                .font(.system(size: 20, weight: .bold))
+                                            Text("out of 5")
+                                                .font(.system(size: 14))
+                                                .foregroundColor(.white.opacity(0.9))
+                                        }
+                                        .foregroundColor(.white)
 
-                    Text("\(movie.fields.genre.first ?? "") . \(movie.fields.runtime)")
-                        .font(.system(size: 13))
-                        .foregroundColor(.white.opacity(0.7))
-                }
-                .padding(20)
-                .background(
-                    LinearGradient(
-                        gradient: Gradient(colors: [.clear, .black.opacity(0.9)]),
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .cornerRadius(12)
-                )
-            }
-        } else {
-            VStack(alignment: .leading) {
-                AsyncImage(url: URL(string: movie.fields.poster)) { image in
-                    image.resizable().aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Color.gray.opacity(0.2)
-                }
-                .frame(width: 175, height: 260)
-                .cornerRadius(10)
-                .clipped()
-            }
-        }
-    }
-}
+                                        Text("\(movie.fields.genre.first ?? "") . \(movie.fields.runtime)")
+                                            .font(.system(size: 13))
+                                            .foregroundColor(.white.opacity(0.7))
+                                    }
+                                    .padding(20) // This padding now only affects text, not the shade
+                                }
+                            } else {
+                                // ... (rest of small card code)
+                                VStack(alignment: .leading) {
+                                    AsyncImage(url: URL(string: movie.fields.poster)) { image in
+                                        image.resizable().aspectRatio(contentMode: .fill)
+                                    } placeholder: {
+                                        Color.gray.opacity(0.2)
+                                    }
+                                    .frame(width: 175, height: 260)
+                                    .cornerRadius(10)
+                                    .clipped()
+                                }
+                            }
+                        }
+                    }
 
 extension MovieViewModel {
     var highlyRatedMovies: [MovieRecord] {
@@ -197,6 +217,30 @@ extension MovieViewModel {
 
     var genres: [String] {
         moviesByGenre.keys.sorted()
+    }
+}
+struct MovieGridView: View {
+    let title: String
+    let movies: [MovieRecord]
+    
+    let columns = [
+        GridItem(.flexible()),
+        GridItem(.flexible())
+    ]
+    
+    var body: some View {
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: 20) {
+                ForEach(movies) { movie in
+                    NavigationLink(value: movie) {
+                        MovieCard(movie: movie, isLarge: false)
+                    }
+                }
+            }
+            .padding()
+        }
+        .navigationTitle(title)
+        .background(Color.black.ignoresSafeArea())
     }
 }
 

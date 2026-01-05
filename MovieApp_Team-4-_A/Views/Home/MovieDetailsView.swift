@@ -1,8 +1,8 @@
 //
-//  MoviesDetailsView.swift
-//  Movies
+//  MovieDetailsView.swift
+//  MovieApp_Team-4-_A
 //
-//  Created by Danyah ALbarqawi on 24/12/2025.
+//  Created by Rana Alngashy on 16/07/1447 AH.
 //
 
 import SwiftUI
@@ -105,7 +105,6 @@ struct MoviesDetailsView: View {
                                     .background(Color.white.opacity(0.2))
                                     .clipShape(Circle())
                             }
-                            
                             Spacer()
                             
                             Button(action: {
@@ -186,7 +185,6 @@ struct MoviesDetailsView: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
-                    
                     // MARK: - Story Section
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Story")
@@ -272,7 +270,6 @@ struct MoviesDetailsView: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
-                    
                     // Divider line
                     Rectangle()
                         .fill(Color.gray.opacity(0.3))
@@ -320,7 +317,6 @@ struct MoviesDetailsView: View {
                         .padding(.horizontal, 16)
                     }
                     .padding(.top, 16)
-                    
                     // MARK: - Write Review Button
                     NavigationLink(value: "writeReview") {
                         HStack {
@@ -344,11 +340,19 @@ struct MoviesDetailsView: View {
             }
         }
         .navigationBarHidden(true)
+        .navigationDestination(for: String.self) { value in
+            if value == "writeReview" {
+                WriteReviewView(
+                    movieId: movie.id,
+                    userId: currentUserId
+                )
+            }
+        }
+
         .task {
             await loadAllData()
         }
     }
-    
     // MARK: - API Functions
     
     private func loadAllData() async {
@@ -392,108 +396,106 @@ struct MoviesDetailsView: View {
             print("Failed to check bookmark: \(error)")
         }
     }
-    
     private func toggleBookmark() async {
-        guard !currentUserId.isEmpty else {
-            print("No user ID - cannot save movie")
-            return
-        }
-        
-        do {
-            if isBookmarked, let savedId = savedMovieRecordId {
-                try await apiService.unsaveMovie(savedMovieId: savedId)
-                isBookmarked = false
-                savedMovieRecordId = nil
-            } else {
-                let newSavedId = try await apiService.saveMovie(userId: currentUserId, movieId: movie.id)
-                isBookmarked = true
-                savedMovieRecordId = newSavedId
-            }
-        } catch {
-            print("Failed to toggle bookmark: \(error)")
-        }
-    }
-    
-    private func shareMovie() {
-        let shareText = "Check out \(movie.fields.name)!"
-        let activityVC = UIActivityViewController(activityItems: [shareText], applicationActivities: nil)
-        
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let rootVC = windowScene.windows.first?.rootViewController {
-            rootVC.present(activityVC, animated: true)
-        }
-    }
-    
-    private func formatDate(_ isoDate: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        guard let date = formatter.date(from: isoDate) else { return "" }
-        
-        let calendar = Calendar.current
-        if let daysAgo = calendar.dateComponents([.day], from: date, to: Date()).day, daysAgo < 7 {
-            let dayFormatter = DateFormatter()
-            dayFormatter.dateFormat = "EEEE"
-            return dayFormatter.string(from: date)
-        }
-        
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "MMM d"
-        return dateFormatter.string(from: date)
-    }
-}
-
-// MARK: - Person Card (for Directors & Actors)
-struct PersonCard: View {
-    let name: String
-    let imageURL: String?
-    
-    var body: some View {
-        VStack(spacing: 8) {
-            if let imageURL = imageURL, let url = URL(string: imageURL) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .empty:
-                        Circle()
-                            .fill(Color.gray.opacity(0.3))
-                            .frame(width: 70, height: 70)
-                            .overlay(ProgressView().tint(.white))
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: 70, height: 70)
-                            .clipShape(Circle())
-                    case .failure:
-                        Circle()
-                            .fill(Color.gray.opacity(0.3))
-                            .frame(width: 70, height: 70)
-                            .overlay(
-                                Image(systemName: "person.fill")
-                                    .foregroundColor(.gray)
-                            )
-                    @unknown default:
-                        EmptyView()
-                    }
-                }
-            } else {
-                Circle()
-                    .fill(Color.gray.opacity(0.3))
-                    .frame(width: 70, height: 70)
-                    .overlay(
-                        Image(systemName: "person.fill")
-                            .foregroundColor(.gray)
-                    )
+            guard !currentUserId.isEmpty else {
+                print("No user ID - cannot save movie")
+                return
             }
             
-            Text(name)
-                .font(.system(size: 12))
-                .foregroundColor(.white)
-                .lineLimit(1)
-                .frame(width: 80)
+            do {
+                if isBookmarked, let savedId = savedMovieRecordId {
+                    try await apiService.unsaveMovie(savedMovieId: savedId)
+                    isBookmarked = false
+                    savedMovieRecordId = nil
+                } else {
+                    let newSavedId = try await apiService.saveMovie(userId: currentUserId, movieId: movie.id)
+                    isBookmarked = true
+                    savedMovieRecordId = newSavedId
+                }
+            } catch {
+                print("Failed to toggle bookmark: \(error)")
+            }
+        }
+        
+        private func shareMovie() {
+            let shareText = "Check out \(movie.fields.name)!"
+            let activityVC = UIActivityViewController(activityItems: [shareText], applicationActivities: nil)
+            
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let rootVC = windowScene.windows.first?.rootViewController {
+                rootVC.present(activityVC, animated: true)
+            }
+        }
+    private func formatDate(_ isoDate: String) -> String {
+            let formatter = ISO8601DateFormatter()
+            guard let date = formatter.date(from: isoDate) else { return "" }
+            
+            let calendar = Calendar.current
+            if let daysAgo = calendar.dateComponents([.day], from: date, to: Date()).day, daysAgo < 7 {
+                let dayFormatter = DateFormatter()
+                dayFormatter.dateFormat = "EEEE"
+                return dayFormatter.string(from: date)
+            }
+            
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "MMM d"
+            return dateFormatter.string(from: date)
         }
     }
-}
 
-// MARK: - Review Card
+    // MARK: - Person Card (for Directors & Actors)
+    struct PersonCard: View {
+        let name: String
+        let imageURL: String?
+        
+        var body: some View {
+            VStack(spacing: 8) {
+                if let imageURL = imageURL, let url = URL(string: imageURL) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .empty:
+                            Circle()
+                                .fill(Color.gray.opacity(0.3))
+                                .frame(width: 70, height: 70)
+                                .overlay(ProgressView().tint(.white))
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 70, height: 70)
+                                .clipShape(Circle())
+                        case .failure:
+                            Circle()
+                                .fill(Color.gray.opacity(0.3))
+                                .frame(width: 70, height: 70)
+                                .overlay(
+                                    Image(systemName: "person.fill")
+                                        .foregroundColor(.gray)
+                                )
+                        @unknown default:
+                            EmptyView()
+                        }
+                     }
+                 } else {
+                     Circle()
+                         .fill(Color.gray.opacity(0.3))
+                         .frame(width: 70, height: 70)
+                         .overlay(
+                             Image(systemName: "person.fill")
+                                 .foregroundColor(.gray)
+                         )
+                 }
+                 
+                 Text(name)
+                     .font(.system(size: 12))
+                     .foregroundColor(.white)
+                     .lineLimit(1)
+                     .frame(width: 80)
+             }
+         }
+     }
+
+     // MARK: - Review Card
 struct ReviewCard: View {
     let profileImage: String
     let reviewerName: String
@@ -536,26 +538,24 @@ struct ReviewCard: View {
                 .foregroundColor(.gray)
                 .lineSpacing(4)
                 .fixedSize(horizontal: false, vertical: true)
-            
             if !date.isEmpty {
-                Spacer()
-                HStack {
-                    Spacer()
-                    Text(date)
-                        .font(.system(size: 12))
-                        .foregroundColor(.gray.opacity(0.6))
+                            Spacer()
+                            HStack {
+                                Spacer()
+                                Text(date)
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.gray.opacity(0.6))
+                            }
+                        }
+                    }
+                    .padding(16)
+                    .frame(width: 300, alignment: .topLeading)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(red: 0.15, green: 0.15, blue: 0.15))
+                    )
                 }
             }
-        }
-        .padding(16)
-        .frame(width: 300, alignment: .topLeading)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(red: 0.15, green: 0.15, blue: 0.15))
-        )
-    }
-}
-
 // MARK: - Preview
 struct MoviesDetailsView_Previews: PreviewProvider {
     static var previews: some View {
@@ -578,3 +578,4 @@ struct MoviesDetailsView_Previews: PreviewProvider {
         .preferredColorScheme(.dark)
     }
 }
+

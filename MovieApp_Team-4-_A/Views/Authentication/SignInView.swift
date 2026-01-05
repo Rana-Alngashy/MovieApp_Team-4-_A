@@ -135,7 +135,7 @@ struct SignInView: View {
                         do {
                             let user = try await apiService.signInExistingUser(
                                 email: email,
-                                password: password
+                               password: password
                             )
 
                             // ✅ ONLY HERE login is allowed
