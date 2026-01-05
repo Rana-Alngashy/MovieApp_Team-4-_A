@@ -9,6 +9,7 @@ struct SignInView: View {
     @State private var showPassword = false
     @State private var emailInvalid = false
     @State private var passwordInvalid = false
+    @State private var keyboardOffset: CGFloat = 0
 
     @FocusState private var focusedField: Field?
     enum Field { case email, password }
@@ -94,7 +95,21 @@ struct SignInView: View {
                 Spacer(minLength: 40)
             }
             .padding(.horizontal, 24)
-            .offset(y: 170)
+            .offset(y: 170 - keyboardOffset)
+            .animation(.easeOut(duration: 0.25), value: keyboardOffset)
+        }
+        .onTapGesture {
+            focusedField = nil
+        }
+        .onAppear {
+            NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
+                if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
+                    keyboardOffset = keyboardFrame.height * 0.4
+                }
+            }
+            NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
+                keyboardOffset = 0
+            }
         }
     }
 
