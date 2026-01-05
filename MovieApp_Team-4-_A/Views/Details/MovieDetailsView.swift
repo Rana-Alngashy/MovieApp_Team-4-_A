@@ -14,35 +14,10 @@ struct MoviesDetailsView: View {
     let movie: MovieRecord
     let signedInEmail: String
     
-    // MARK: - State Properties
-    @State private var isBookmarked: Bool = false
-    @State private var savedMovieRecordId: String?
-    @State private var reviews: [ReviewRecord] = []
-    @State private var currentUserId: String = ""
-    
-    // ⭐️ NEW: Actors and Directors from API
-    @State private var allActors: [ActorRecord] = []
-    @State private var allDirectors: [DirectorRecord] = []
+    // MARK: - ViewModel
+    @StateObject private var viewModel = MovieDetailsViewModel()
     
     @Environment(\.dismiss) private var dismiss
-    
-    private let apiService = APIService()
-    
-    // ⭐️ Computed: Get actors for this movie by matching names
-    private var movieActors: [ActorRecord] {
-        guard let actorNames = movie.fields.actors else { return [] }
-        return allActors.filter { actor in
-            actorNames.contains(actor.fields.name)
-        }
-    }
-    
-    // ⭐️ Computed: Get director for this movie (first match or all)
-    // Note: You may need to add a "director" field to MovieFields if you have it
-    private var movieDirectors: [DirectorRecord] {
-        // For now, show first director as placeholder
-        // Update this logic when you have director linked to movies
-        return Array(allDirectors.prefix(1))
-    }
     
     var body: some View {
         ZStack {
@@ -118,10 +93,10 @@ struct MoviesDetailsView: View {
                             
                             Button(action: {
                                 Task {
-                                    await toggleBookmark()
+                                    await viewModel.toggleBookmark(movieId: movie.id)
                                 }
                             }) {
-                                Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
+                                Image(systemName: viewModel.isBookmarked ? "bookmark.fill" : "bookmark")
                                     .font(.system(size: 18, weight: .medium))
                                     .foregroundColor(.yellow)
                             }
@@ -185,6 +160,7 @@ struct MoviesDetailsView: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
+                    
                     // MARK: - Story Section
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Story")
@@ -227,12 +203,12 @@ struct MoviesDetailsView: View {
                         
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 16) {
-                                if movieDirectors.isEmpty {
+                                if viewModel.movieDirectors.isEmpty {
                                     Text("No director info")
                                         .foregroundColor(.gray)
                                         .font(.system(size: 14))
                                 } else {
-                                    ForEach(movieDirectors) { director in
+                                    ForEach(viewModel.movieDirectors) { director in
                                         PersonCard(
                                             name: director.fields.name,
                                             imageURL: director.fields.image
@@ -253,12 +229,12 @@ struct MoviesDetailsView: View {
                         
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 16) {
-                                if movieActors.isEmpty {
+                                if viewModel.movieActors.isEmpty {
                                     Text("No cast info")
                                         .foregroundColor(.gray)
                                         .font(.system(size: 14))
                                 } else {
-                                    ForEach(movieActors) { actor in
+                                    ForEach(viewModel.movieActors) { actor in
                                         PersonCard(
                                             name: actor.fields.name,
                                             imageURL: actor.fields.image
@@ -270,6 +246,7 @@ struct MoviesDetailsView: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
+                    
                     // Divider line
                     Rectangle()
                         .fill(Color.gray.opacity(0.3))
@@ -297,19 +274,19 @@ struct MoviesDetailsView: View {
                     // MARK: Review Cards
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
-                            if reviews.isEmpty {
+                            if viewModel.reviews.isEmpty {
                                 Text("No reviews yet. Be the first!")
                                     .font(.system(size: 14))
                                     .foregroundColor(.gray)
                                     .padding()
                             } else {
-                                ForEach(reviews) { review in
+                                ForEach(viewModel.reviews) { review in
                                     ReviewCard(
                                         profileImage: "",
                                         reviewerName: "User",
                                         rating: Int((review.fields.rate ?? 0) / 2),
                                         reviewText: review.fields.reviewText ?? "",
-                                        date: formatDate(review.createdTime)
+                                        date: viewModel.formatDate(review.createdTime)
                                     )
                                 }
                             }
@@ -317,6 +294,7 @@ struct MoviesDetailsView: View {
                         .padding(.horizontal, 16)
                     }
                     .padding(.top, 16)
+                    
                     // MARK: - Write Review Button
                     NavigationLink(value: "writeReview") {
                         HStack {
@@ -344,158 +322,80 @@ struct MoviesDetailsView: View {
             if value == "writeReview" {
                 WriteReviewView(
                     movieId: movie.id,
-                    userId: currentUserId
+                    userId: viewModel.currentUserId
                 )
             }
         }
-
         .task {
-            await loadAllData()
+            await viewModel.loadAllData(movieId: movie.id, signedInEmail: signedInEmail)
         }
     }
-    // MARK: - API Functions
     
-    private func loadAllData() async {
-        // Load actors and directors first
-        do {
-            async let actorsTask = apiService.fetchActors()
-            async let directorsTask = apiService.fetchDirectors()
-            
-            allActors = try await actorsTask
-            allDirectors = try await directorsTask
-        } catch {
-            print("Failed to load actors/directors: \(error)")
-        }
+    // MARK: - Share Movie
+    private func shareMovie() {
+        let shareText = "Check out \(movie.fields.name)!"
+        let activityVC = UIActivityViewController(activityItems: [shareText], applicationActivities: nil)
         
-        // Load user data
-        do {
-            let result = try await apiService.fetchProfileByEmail(email: signedInEmail)
-            currentUserId = result.user.id
-            
-            await loadReviews()
-            await checkBookmarkStatus()
-        } catch {
-            print("Failed to load user: \(error)")
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootVC = windowScene.windows.first?.rootViewController {
+            rootVC.present(activityVC, animated: true)
         }
     }
+}
+
+// MARK: - Person Card (for Directors & Actors)
+struct PersonCard: View {
+    let name: String
+    let imageURL: String?
     
-    private func loadReviews() async {
-        do {
-            reviews = try await apiService.fetchMovieReviews(movieId: movie.id)
-        } catch {
-            print("Failed to load reviews: \(error)")
-        }
-    }
-    
-    private func checkBookmarkStatus() async {
-        guard !currentUserId.isEmpty else { return }
-        do {
-            savedMovieRecordId = try await apiService.checkIfMovieSaved(userId: currentUserId, movieId: movie.id)
-            isBookmarked = savedMovieRecordId != nil
-        } catch {
-            print("Failed to check bookmark: \(error)")
-        }
-    }
-    private func toggleBookmark() async {
-            guard !currentUserId.isEmpty else {
-                print("No user ID - cannot save movie")
-                return
-            }
-            
-            do {
-                if isBookmarked, let savedId = savedMovieRecordId {
-                    try await apiService.unsaveMovie(savedMovieId: savedId)
-                    isBookmarked = false
-                    savedMovieRecordId = nil
-                } else {
-                    let newSavedId = try await apiService.saveMovie(userId: currentUserId, movieId: movie.id)
-                    isBookmarked = true
-                    savedMovieRecordId = newSavedId
+    var body: some View {
+        VStack(spacing: 8) {
+            if let imageURL = imageURL, let url = URL(string: imageURL) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .empty:
+                        Circle()
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(width: 70, height: 70)
+                            .overlay(ProgressView().tint(.white))
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 70, height: 70)
+                            .clipShape(Circle())
+                    case .failure:
+                        Circle()
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(width: 70, height: 70)
+                            .overlay(
+                                Image(systemName: "person.fill")
+                                    .foregroundColor(.gray)
+                            )
+                    @unknown default:
+                        EmptyView()
+                    }
                 }
-            } catch {
-                print("Failed to toggle bookmark: \(error)")
-            }
-        }
-        
-        private func shareMovie() {
-            let shareText = "Check out \(movie.fields.name)!"
-            let activityVC = UIActivityViewController(activityItems: [shareText], applicationActivities: nil)
-            
-            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-               let rootVC = windowScene.windows.first?.rootViewController {
-                rootVC.present(activityVC, animated: true)
-            }
-        }
-    private func formatDate(_ isoDate: String) -> String {
-            let formatter = ISO8601DateFormatter()
-            guard let date = formatter.date(from: isoDate) else { return "" }
-            
-            let calendar = Calendar.current
-            if let daysAgo = calendar.dateComponents([.day], from: date, to: Date()).day, daysAgo < 7 {
-                let dayFormatter = DateFormatter()
-                dayFormatter.dateFormat = "EEEE"
-                return dayFormatter.string(from: date)
+            } else {
+                Circle()
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: 70, height: 70)
+                    .overlay(
+                        Image(systemName: "person.fill")
+                            .foregroundColor(.gray)
+                    )
             }
             
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "MMM d"
-            return dateFormatter.string(from: date)
+            Text(name)
+                .font(.system(size: 12))
+                .foregroundColor(.white)
+                .lineLimit(1)
+                .frame(width: 80)
         }
     }
+}
 
-    // MARK: - Person Card (for Directors & Actors)
-    struct PersonCard: View {
-        let name: String
-        let imageURL: String?
-        
-        var body: some View {
-            VStack(spacing: 8) {
-                if let imageURL = imageURL, let url = URL(string: imageURL) {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .empty:
-                            Circle()
-                                .fill(Color.gray.opacity(0.3))
-                                .frame(width: 70, height: 70)
-                                .overlay(ProgressView().tint(.white))
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 70, height: 70)
-                                .clipShape(Circle())
-                        case .failure:
-                            Circle()
-                                .fill(Color.gray.opacity(0.3))
-                                .frame(width: 70, height: 70)
-                                .overlay(
-                                    Image(systemName: "person.fill")
-                                        .foregroundColor(.gray)
-                                )
-                        @unknown default:
-                            EmptyView()
-                        }
-                     }
-                 } else {
-                     Circle()
-                         .fill(Color.gray.opacity(0.3))
-                         .frame(width: 70, height: 70)
-                         .overlay(
-                             Image(systemName: "person.fill")
-                                 .foregroundColor(.gray)
-                         )
-                 }
-                 
-                 Text(name)
-                     .font(.system(size: 12))
-                     .foregroundColor(.white)
-                     .lineLimit(1)
-                     .frame(width: 80)
-             }
-         }
-     }
-
-     // MARK: - Review Card
+// MARK: - Review Card
 struct ReviewCard: View {
     let profileImage: String
     let reviewerName: String
@@ -538,24 +438,26 @@ struct ReviewCard: View {
                 .foregroundColor(.gray)
                 .lineSpacing(4)
                 .fixedSize(horizontal: false, vertical: true)
+            
             if !date.isEmpty {
-                            Spacer()
-                            HStack {
-                                Spacer()
-                                Text(date)
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.gray.opacity(0.6))
-                            }
-                        }
-                    }
-                    .padding(16)
-                    .frame(width: 300, alignment: .topLeading)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(red: 0.15, green: 0.15, blue: 0.15))
-                    )
+                Spacer()
+                HStack {
+                    Spacer()
+                    Text(date)
+                        .font(.system(size: 12))
+                        .foregroundColor(.gray.opacity(0.6))
                 }
             }
+        }
+        .padding(16)
+        .frame(width: 300, alignment: .topLeading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(red: 0.15, green: 0.15, blue: 0.15))
+        )
+    }
+}
+
 // MARK: - Preview
 struct MoviesDetailsView_Previews: PreviewProvider {
     static var previews: some View {
@@ -578,4 +480,3 @@ struct MoviesDetailsView_Previews: PreviewProvider {
         .preferredColorScheme(.dark)
     }
 }
-

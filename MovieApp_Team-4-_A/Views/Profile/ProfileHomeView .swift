@@ -1,6 +1,40 @@
 import SwiftUI
 import PhotosUI
 
+// MARK: - Saved Movie Card (Grid Style)
+struct SavedMovieCard: View {
+    let movie: MovieRecord
+    
+    var body: some View {
+        AsyncImage(url: URL(string: movie.fields.poster)) { phase in
+            switch phase {
+            case .empty:
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.gray.opacity(0.3))
+                    .aspectRatio(0.7, contentMode: .fit)
+                    .overlay(ProgressView().tint(.white))
+            case .success(let image):
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(minWidth: 0, maxWidth: .infinity)
+                    .aspectRatio(0.7, contentMode: .fit)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            case .failure:
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.gray.opacity(0.3))
+                    .aspectRatio(0.7, contentMode: .fit)
+                    .overlay(
+                        Image(systemName: "photo")
+                            .foregroundColor(.gray)
+                    )
+            @unknown default:
+                EmptyView()
+            }
+        }
+    }
+}
+
 // ✅ Profile Home (with working Sign Out)
 struct ProfileHomeView: View {
 
@@ -9,6 +43,12 @@ struct ProfileHomeView: View {
 
     @EnvironmentObject var vm: ProfileViewModel
     @Environment(\.dismiss) var dismiss
+    
+    // ⭐️ Grid columns for saved movies
+    let columns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -84,15 +124,11 @@ struct ProfileHomeView: View {
                 }
                 .frame(maxWidth: .infinity)
             } else {
+                // ⭐️ CHANGED: Grid layout for saved movies (like screenshot)
                 ScrollView {
-                    VStack(spacing: 12) {
+                    LazyVGrid(columns: columns, spacing: 12) {
                         ForEach(vm.savedMovies) { movie in
-                            Text(movie.fields.name)
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding()
-                                .background(Color(white: 0.12))
-                                .cornerRadius(12)
+                            SavedMovieCard(movie: movie)
                         }
                     }
                 }

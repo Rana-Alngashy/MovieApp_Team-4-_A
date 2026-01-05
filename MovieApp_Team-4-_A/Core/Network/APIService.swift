@@ -8,36 +8,6 @@
 
 import Foundation
 
-// MARK: - Actor Models
-struct ActorResponse: Codable {
-    let records: [ActorRecord]
-}
-
-struct ActorRecord: Codable, Identifiable {
-    let id: String
-    let fields: ActorFields
-}
-
-struct ActorFields: Codable {
-    let name: String
-    let image: String?
-}
-
-// MARK: - Director Models
-struct DirectorResponse: Codable {
-    let records: [DirectorRecord]
-}
-
-struct DirectorRecord: Codable, Identifiable {
-    let id: String
-    let fields: DirectorFields
-}
-
-struct DirectorFields: Codable {
-    let name: String
-    let image: String?
-}
-
 class APIService {
     
     private let baseURL = "https://api.airtable.com/v0/appsfcB6YESLj4NCN"
@@ -353,6 +323,7 @@ class APIService {
         
         return recordId
     }
+    
     // MARK: - SIMPLE SIGN IN (EXISTING USERS ONLY)
     func signInExistingUser(email: String, password: String) async throws -> UserRecord {
 
@@ -410,6 +381,7 @@ class APIService {
             throw URLError(.badServerResponse)
         }
     }
+    
     // MARK: - Update Profile Image (URL only)
     func updateUserProfileImage(
         recordID: String,
@@ -436,5 +408,95 @@ class APIService {
               (200...299).contains(http.statusCode) else {
             throw URLError(.badServerResponse)
         }
+    }
+    
+    // MARK: - ⭐️ NEW: Fetch Movie Actors (via junction table)
+    /// Fetches actors for a specific movie using movie_actors junction table
+    /// - Parameter movieId: The Airtable record ID of the movie
+    /// - Returns: Array of ActorRecord objects
+    func fetchMovieActors(movieId: String) async throws -> [ActorRecord] {
+        // 1) Get actor IDs from movie_actors junction table
+        let filterFormula = "{movie_id}=\"\(movieId)\""
+        guard let encodedFilter = filterFormula.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "\(baseURL)/movie_actors?filterByFormula=\(encodedFilter)") else {
+            throw URLError(.badURL)
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue(token, forHTTPHeaderField: "Authorization")
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        
+        let decoded = try JSONDecoder().decode(MovieActorsResponse.self, from: data)
+        let actorIds = decoded.records.map { $0.fields.actor_id }
+        
+        if actorIds.isEmpty { return [] }
+        
+        // 2) Fetch each actor by ID
+        var actors: [ActorRecord] = []
+        for actorId in actorIds {
+            let actorUrl = URL(string: "\(baseURL)/actors/\(actorId)")!
+            var actorRequest = URLRequest(url: actorUrl)
+            actorRequest.httpMethod = "GET"
+            actorRequest.setValue(token, forHTTPHeaderField: "Authorization")
+            
+            let (actorData, actorResponse) = try await URLSession.shared.data(for: actorRequest)
+            guard (actorResponse as? HTTPURLResponse)?.statusCode == 200 else { continue }
+            
+            let actor = try JSONDecoder().decode(ActorRecord.self, from: actorData)
+            actors.append(actor)
+        }
+        
+        return actors
+    }
+    
+    // MARK: - ⭐️ NEW: Fetch Movie Directors (via junction table)
+    /// Fetches directors for a specific movie using movie_directors junction table
+    /// - Parameter movieId: The Airtable record ID of the movie
+    /// - Returns: Array of DirectorRecord objects
+    func fetchMovieDirectors(movieId: String) async throws -> [DirectorRecord] {
+        // 1) Get director IDs from movie_directors junction table
+        let filterFormula = "{movie_id}=\"\(movieId)\""
+        guard let encodedFilter = filterFormula.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "\(baseURL)/movie_directors?filterByFormula=\(encodedFilter)") else {
+            throw URLError(.badURL)
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue(token, forHTTPHeaderField: "Authorization")
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        
+        let decoded = try JSONDecoder().decode(MovieDirectorsResponse.self, from: data)
+        let directorIds = decoded.records.map { $0.fields.director_id }
+        
+        if directorIds.isEmpty { return [] }
+        
+        // 2) Fetch each director by ID
+        var directors: [DirectorRecord] = []
+        for directorId in directorIds {
+            let directorUrl = URL(string: "\(baseURL)/directors/\(directorId)")!
+            var directorRequest = URLRequest(url: directorUrl)
+            directorRequest.httpMethod = "GET"
+            directorRequest.setValue(token, forHTTPHeaderField: "Authorization")
+            
+            let (directorData, directorResponse) = try await URLSession.shared.data(for: directorRequest)
+            guard (directorResponse as? HTTPURLResponse)?.statusCode == 200 else { continue }
+            
+            let director = try JSONDecoder().decode(DirectorRecord.self, from: directorData)
+            directors.append(director)
+        }
+        
+        return directors
     }
 }
