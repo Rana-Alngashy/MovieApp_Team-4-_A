@@ -1,6 +1,12 @@
 
 import Foundation
 
+enum AppRoute: Hashable {
+    case writeReview(movieId: String, userId: String)
+    case genre(String)
+}
+
+
 struct ReviewResponse: Codable, Sendable { // Added Sendable
     let records: [ReviewRecord]
 }
