@@ -105,7 +105,7 @@ struct ProfileHomeView: View {
 
             Spacer()
 
-            // ✅ WORKING SIGN OUT
+            // ✅ Sign Out
             Button(role: .destructive) {
                 isAuthenticated = false
                 signedInEmail = ""
@@ -126,7 +126,7 @@ struct ProfileHomeView: View {
     }
 }
 
-// ✅ Edit Profile screen (Name + Email editable + PhotosPicker kept)
+// ✅ Edit Profile screen (Name + Email editable)
 struct ProfileInfoView: View {
 
     @ObservedObject var vm: ProfileViewModel
@@ -139,6 +139,9 @@ struct ProfileInfoView: View {
     @State private var editName: String = ""
     @State private var editEmail: String = ""
 
+    // ✅ ADDED: email validation error
+    @State private var emailError: String?
+
     @State private var selectedItem: PhotosPickerItem? = nil
     @State private var selectedImage: UIImage? = nil
 
@@ -146,7 +149,7 @@ struct ProfileInfoView: View {
         VStack(spacing: 0) {
 
             HStack {
-                Button(action: { dismiss() }) {
+                Button { dismiss() } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.left")
                         Text("Back")
@@ -162,26 +165,42 @@ struct ProfileInfoView: View {
 
                 Spacer()
 
-                Button(action: {
+                Button {
                     if isEditing {
-                        // ✅ SAVE TO API + update local + update signedInEmail
-                        Task {
-                            await vm.saveProfileEdits(name: editName, email: editEmail)
 
-                            // keep UI in sync
+                        let trimmedEmail = editEmail
+                            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+                        // ✅ EMAIL RULES (@ and .com)
+                        guard trimmedEmail.contains("@"),
+                              trimmedEmail.contains(".com") else {
+                            emailError = "Email must contain @ and .com"
+                            return
+                        }
+
+                        emailError = nil
+
+                        Task {
+                            await vm.saveProfileEdits(
+                                name: editName,
+                                email: trimmedEmail
+                            )
+
                             vm.name = editName
-                            vm.email = editEmail
-                            signedInEmail = editEmail
+                            vm.email = trimmedEmail
+                            signedInEmail = trimmedEmail
 
                             isEditing = false
                             dismiss()
                         }
+
                     } else {
                         editName = vm.name
                         editEmail = vm.email
+                        emailError = nil
                         isEditing = true
                     }
-                }) {
+                } label: {
                     Text(isEditing ? "Save" : "Edit")
                         .foregroundColor(Color("gold1"))
                 }
@@ -203,7 +222,8 @@ struct ProfileInfoView: View {
                                     .scaledToFill()
                                     .frame(width: 100, height: 100)
                                     .clipShape(Circle())
-                            } else if let url = URL(string: vm.profileImage), !vm.profileImage.isEmpty {
+                            } else if let url = URL(string: vm.profileImage),
+                                      !vm.profileImage.isEmpty {
                                 AsyncImage(url: url) { img in
                                     img.resizable().scaledToFill()
                                 } placeholder: {
@@ -230,14 +250,6 @@ struct ProfileInfoView: View {
                         }
                     }
                     .disabled(!isEditing)
-                    .onChange(of: selectedItem) { newItem in
-                        Task {
-                            if let data = try? await newItem?.loadTransferable(type: Data.self),
-                               let uiImage = UIImage(data: data) {
-                                selectedImage = uiImage
-                            }
-                        }
-                    }
                     .padding(.top, 40)
                     .padding(.bottom, 30)
 
@@ -248,13 +260,22 @@ struct ProfileInfoView: View {
                             isEditing: isEditing
                         )
 
-                        Divider().background(Color.white.opacity(0.1)).padding(.leading)
+                        Divider().background(Color.white.opacity(0.1))
+                            .padding(.leading)
 
                         InfoField(
                             label: "Email",
                             value: isEditing ? $editEmail : .constant(vm.email),
                             isEditing: isEditing
                         )
+
+                        // ✅ EMAIL ERROR MESSAGE
+                        if let emailError {
+                            Text(emailError)
+                                .foregroundColor(.red)
+                                .font(.caption)
+                                .padding(.leading)
+                        }
                     }
                     .background(Color(white: 0.12))
                     .cornerRadius(12)
@@ -264,7 +285,6 @@ struct ProfileInfoView: View {
 
             Spacer()
 
-            // ✅ SIGN OUT here too (kept)
             if !isEditing {
                 Button(role: .destructive) {
                     isAuthenticated = false
