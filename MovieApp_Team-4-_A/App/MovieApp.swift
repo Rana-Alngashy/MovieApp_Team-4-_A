@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct MovieApp_Team_4_AApp: App {
+struct MovieApp: App {
 
     @State private var isAuthenticated = false
     @State private var signedInEmail = ""
