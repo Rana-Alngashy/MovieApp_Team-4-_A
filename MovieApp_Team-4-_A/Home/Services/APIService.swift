@@ -264,11 +264,11 @@ class APIService {
         request.setValue(token, forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        // ⭐️ FIXED: Both user_id and movie_id must be arrays for linked records in Airtable
+        // ⭐️ FIXED: user_id is a text field (String), movie_id is a linked record (Array)
         let body: [String: Any] = [
             "fields": [
-                "user_id": [userId],    // ⭐️ Array for linked record
-                "movie_id": [movieId]   // ⭐️ Array for linked record
+                "user_id": userId,       // ⭐️ String (text field)
+                "movie_id": [movieId]    // ⭐️ Array (linked record)
             ]
         ]
         

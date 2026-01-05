@@ -310,7 +310,7 @@ struct MoviesDetailsView: View {
                                     ReviewCard(
                                         profileImage: "",
                                         reviewerName: "User",
-                                        rating: (review.fields.rate ?? 0) / 2,
+                                        rating: Int((review.fields.rate ?? 0) / 2),
                                         reviewText: review.fields.reviewText ?? "",
                                         date: formatDate(review.createdTime)
                                     )

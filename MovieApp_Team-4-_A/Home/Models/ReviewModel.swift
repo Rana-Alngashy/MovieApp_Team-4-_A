@@ -22,7 +22,7 @@ struct ReviewRecord: Codable, Identifiable {
 // MARK: - Review Fields
 struct ReviewFields: Codable {
     let reviewText: String?
-    let rate: Int?
+    let rate: Double?  // ⭐️ FIXED: Changed from Int to Double
     let movieId: String?
     let userId: String?
     
