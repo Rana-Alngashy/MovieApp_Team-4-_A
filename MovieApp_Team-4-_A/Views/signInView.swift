@@ -1,28 +1,35 @@
 import SwiftUI
 
 struct SignInView: View {
-    @Binding var isAuthenticated: Bool // Connected to App state
-    @Binding var signedInEmail: String // ✅ add this (keep the email for profile)
 
+    // MARK: - App State
+    @Binding var isAuthenticated: Bool
+    @Binding var signedInEmail: String
+
+    // MARK: - UI State
     @State private var email = ""
     @State private var password = ""
     @State private var showPassword = false
     @State private var emailInvalid = false
     @State private var passwordInvalid = false
     @State private var keyboardOffset: CGFloat = 0
+    @State private var loginError: String?
+    @State private var isLoading = false
+
+    private let apiService = APIService()
 
     @FocusState private var focusedField: Field?
     enum Field { case email, password }
 
     var isFormValid: Bool {
-        !emailInvalid && !passwordInvalid && !email.isEmpty && !password.isEmpty
+        !emailInvalid && !passwordInvalid &&
+        !email.isEmpty && !password.isEmpty
     }
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea() // Background safety
-            
-            // Your Background Assets
+            Color.black.ignoresSafeArea()
+
             Image("signinbackground")
                 .resizable()
                 .scaledToFit()
@@ -45,44 +52,104 @@ struct SignInView: View {
                     .font(.system(size: 18))
                     .foregroundStyle(.white)
 
+                // MARK: - Email
                 Text("Email")
                     .font(.system(size: 18, weight: .medium))
                     .foregroundStyle(Color("gray1"))
 
-                TextField("", text: $email, prompt: Text("Enter your Email").foregroundStyle(Color("gray1").opacity(0.55)))
-                    .focused($focusedField, equals: .email)
-                    .padding(14)
-                    .background(Color("gray2").opacity(0.26))
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(emailInvalid ? Color.red : (focusedField == .email ? Color("gold1") : Color.clear), lineWidth: 2.5))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .foregroundStyle(.white)
-                    .textInputAutocapitalization(.none)
+                TextField(
+                    "",
+                    text: $email,
+                    prompt: Text("Enter your Email")
+                        .foregroundStyle(Color("gray1").opacity(0.55))
+                )
+                .focused($focusedField, equals: .email)
+                .padding(14)
+                .background(Color("gray2").opacity(0.26))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(
+                            emailInvalid ? .red :
+                            (focusedField == .email ? Color("gold1") : .clear),
+                            lineWidth: 2.5
+                        )
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .foregroundStyle(.white)
+                .textInputAutocapitalization(.none)
+                .keyboardType(.emailAddress)
 
+                // MARK: - Password
                 Text("Password")
                     .font(.system(size: 18, weight: .medium))
                     .foregroundStyle(Color("gray1"))
 
                 HStack {
                     if showPassword {
-                        TextField("", text: $password, prompt: Text("Enter your Password").foregroundStyle(Color("gray1").opacity(0.55)))
+                        TextField(
+                            "",
+                            text: $password,
+                            prompt: Text("Enter your Password")
+                                .foregroundStyle(Color("gray1").opacity(0.55))
+                        )
                     } else {
-                        SecureField("", text: $password, prompt: Text("Enter your Password").foregroundStyle(Color("gray1").opacity(0.55)))
+                        SecureField(
+                            "",
+                            text: $password,
+                            prompt: Text("Enter your Password")
+                                .foregroundStyle(Color("gray1").opacity(0.55))
+                        )
                     }
-                    Button { showPassword.toggle() } label: {
-                        Image(systemName: showPassword ? "eye.slash" : "eye").foregroundStyle(.gray)
+
+                    Button {
+                        showPassword.toggle()
+                    } label: {
+                        Image(systemName: showPassword ? "eye.slash" : "eye")
+                            .foregroundStyle(.gray)
                     }
                 }
                 .focused($focusedField, equals: .password)
                 .padding(14)
                 .background(Color("gray2").opacity(0.26))
-                .overlay(RoundedRectangle(cornerRadius: 10).stroke(passwordInvalid ? Color.red : (focusedField == .password ? Color("gold1") : Color.clear), lineWidth: 2.5))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(
+                            passwordInvalid ? .red :
+                            (focusedField == .password ? Color("gold1") : .clear),
+                            lineWidth: 2.5
+                        )
+                )
                 .clipShape(RoundedRectangle(cornerRadius: 10))
                 .foregroundStyle(.white)
 
+                // MARK: - SIGN IN BUTTON (API ONLY)
                 Button {
                     validateFields()
+                    guard isFormValid else { return }
+
+                    Task {
+                        isLoading = true
+                        loginError = nil
+                        defer { isLoading = false }
+
+                        do {
+                            let user = try await apiService.signInExistingUser(
+                                email: email,
+                                password: password
+                            )
+
+                            // ✅ ONLY HERE login is allowed
+                            signedInEmail = user.fields.email
+                            isAuthenticated = true
+
+                        } catch {
+                            loginError = "Invalid email or password"
+                            isAuthenticated = false
+                        }
+                    }
+
                 } label: {
-                    Text("Sign in")
+                    Text(isLoading ? "Signing in..." : "Sign in")
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundStyle(.black)
                         .frame(maxWidth: .infinity)
@@ -91,6 +158,14 @@ struct SignInView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
                 .padding(.top, 10)
+                .disabled(isLoading)
+
+                // MARK: - Error Message
+                if let loginError {
+                    Text(loginError)
+                        .foregroundColor(.red)
+                        .font(.caption)
+                }
 
                 Spacer(minLength: 40)
             }
@@ -102,30 +177,36 @@ struct SignInView: View {
             focusedField = nil
         }
         .onAppear {
-            NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
-                if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
-                    keyboardOffset = keyboardFrame.height * 0.4
+            NotificationCenter.default.addObserver(
+                forName: UIResponder.keyboardWillShowNotification,
+                object: nil,
+                queue: .main
+            ) { notification in
+                if let frame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
+                    keyboardOffset = frame.height * 0.4
                 }
             }
-            NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
+
+            NotificationCenter.default.addObserver(
+                forName: UIResponder.keyboardWillHideNotification,
+                object: nil,
+                queue: .main
+            ) { _ in
                 keyboardOffset = 0
             }
         }
     }
 
+    // MARK: - Validation ONLY (NO LOGIN HERE)
     func validateFields() {
         emailInvalid = !email.contains("@") || !email.contains(".")
         passwordInvalid = password.count < 8
-
-        if !emailInvalid && !passwordInvalid {
-            withAnimation {
-                signedInEmail = email
-                isAuthenticated = true
-            }
-        }
     }
 }
 
 #Preview {
-    SignInView(isAuthenticated: .constant(false), signedInEmail: .constant(""))
+    SignInView(
+        isAuthenticated: .constant(false),
+        signedInEmail: .constant("")
+    )
 }
