@@ -353,5 +353,61 @@ class APIService {
         
         return recordId
     }
+    // MARK: - SIMPLE SIGN IN (EXISTING USERS ONLY)
+    func signInExistingUser(email: String, password: String) async throws -> UserRecord {
 
+        let cleanEmail = email
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+
+        let url = URL(string: "\(baseURL)/users")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue(token, forHTTPHeaderField: "Authorization")
+
+        let (data, _) = try await URLSession.shared.data(for: request)
+        let decoded = try JSONDecoder().decode(UserResponse.self, from: data)
+
+        guard let user = decoded.records.first(where: {
+            $0.fields.email.lowercased() == cleanEmail
+        }) else {
+            throw NSError(
+                domain: "Auth",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "User not found"]
+            )
+        }
+
+        // ❗️ NO PASSWORD CHECK (because Airtable passwords are emails)
+        return user
+    }
+    
+    func updateUserProfile(
+        recordID: String,
+        name: String,
+        email: String
+    ) async throws {
+
+        let url = URL(string: "\(baseURL)/users/\(recordID)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.setValue(token, forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body: [String: Any] = [
+            "fields": [
+                "name": name,
+                "email": email
+            ]
+        ]
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+
+        guard let http = response as? HTTPURLResponse,
+              (200...299).contains(http.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+    }
 }

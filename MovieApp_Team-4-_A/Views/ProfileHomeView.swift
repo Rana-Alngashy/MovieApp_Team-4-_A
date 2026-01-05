@@ -3,10 +3,9 @@ import PhotosUI
 
 // ✅ Profile Home (with working Sign Out)
 struct ProfileHomeView: View {
- 
 
-    @Binding var isAuthenticated: Bool        // ✅ for sign out
-    @Binding var signedInEmail: String        // ✅ optional: clear email on sign out
+    @Binding var isAuthenticated: Bool
+    @Binding var signedInEmail: String
 
     @EnvironmentObject var vm: ProfileViewModel
     @Environment(\.dismiss) var dismiss
@@ -32,7 +31,13 @@ struct ProfileHomeView: View {
                 .foregroundColor(.white)
 
             // User card (opens edit screen)
-            NavigationLink(destination: ProfileInfoView(vm: vm, isAuthenticated: $isAuthenticated, signedInEmail: $signedInEmail)) {
+            NavigationLink(
+                destination: ProfileInfoView(
+                    vm: vm,
+                    isAuthenticated: $isAuthenticated,
+                    signedInEmail: $signedInEmail
+                )
+            ) {
                 HStack(spacing: 15) {
                     AsyncImage(url: URL(string: vm.profileImage)) { image in
                         image.resizable().scaledToFill()
@@ -100,13 +105,12 @@ struct ProfileHomeView: View {
 
             Spacer()
 
-            // ✅ WORKING SIGN OUT (goes back to SignInView)
-            Button {
+            // ✅ WORKING SIGN OUT
+            Button(role: .destructive) {
                 isAuthenticated = false
                 signedInEmail = ""
             } label: {
                 Text("Sign Out")
-                    .foregroundColor(.red)
                     .frame(maxWidth: .infinity)
                     .padding()
                     .background(Color(white: 0.12))
@@ -122,7 +126,7 @@ struct ProfileHomeView: View {
     }
 }
 
-// ✅ Edit Profile screen (Name + Email editable)
+// ✅ Edit Profile screen (Name + Email editable + PhotosPicker kept)
 struct ProfileInfoView: View {
 
     @ObservedObject var vm: ProfileViewModel
@@ -160,13 +164,23 @@ struct ProfileInfoView: View {
 
                 Button(action: {
                     if isEditing {
-                        vm.name = editName
-                        vm.email = editEmail
+                        // ✅ SAVE TO API + update local + update signedInEmail
+                        Task {
+                            await vm.saveProfileEdits(name: editName, email: editEmail)
+
+                            // keep UI in sync
+                            vm.name = editName
+                            vm.email = editEmail
+                            signedInEmail = editEmail
+
+                            isEditing = false
+                            dismiss()
+                        }
                     } else {
                         editName = vm.name
                         editEmail = vm.email
+                        isEditing = true
                     }
-                    isEditing.toggle()
                 }) {
                     Text(isEditing ? "Save" : "Edit")
                         .foregroundColor(Color("gold1"))
@@ -228,15 +242,19 @@ struct ProfileInfoView: View {
                     .padding(.bottom, 30)
 
                     VStack(spacing: 0) {
-                        InfoField(label: "Name",
-                                  value: isEditing ? $editName : .constant(vm.name),
-                                  isEditing: isEditing)
+                        InfoField(
+                            label: "Name",
+                            value: isEditing ? $editName : .constant(vm.name),
+                            isEditing: isEditing
+                        )
 
                         Divider().background(Color.white.opacity(0.1)).padding(.leading)
 
-                        InfoField(label: "Email",
-                                  value: isEditing ? $editEmail : .constant(vm.email),
-                                  isEditing: isEditing)
+                        InfoField(
+                            label: "Email",
+                            value: isEditing ? $editEmail : .constant(vm.email),
+                            isEditing: isEditing
+                        )
                     }
                     .background(Color(white: 0.12))
                     .cornerRadius(12)
@@ -246,14 +264,13 @@ struct ProfileInfoView: View {
 
             Spacer()
 
-            // ✅ WORKING SIGN OUT here too
+            // ✅ SIGN OUT here too (kept)
             if !isEditing {
-                Button {
+                Button(role: .destructive) {
                     isAuthenticated = false
                     signedInEmail = ""
                 } label: {
                     Text("Sign Out")
-                        .foregroundColor(.red)
                         .frame(maxWidth: .infinity)
                         .padding()
                         .background(Color(white: 0.12))
@@ -303,7 +320,10 @@ struct InfoField: View {
 
 #Preview {
     NavigationStack {
-        ProfileHomeView(isAuthenticated: .constant(true), signedInEmail: .constant("Noora@gmail.com"))
+        ProfileHomeView(
+            isAuthenticated: .constant(true),
+            signedInEmail: .constant("Noora@gmail.com")
+        )
+        .environmentObject(ProfileViewModel())
     }
 }
-

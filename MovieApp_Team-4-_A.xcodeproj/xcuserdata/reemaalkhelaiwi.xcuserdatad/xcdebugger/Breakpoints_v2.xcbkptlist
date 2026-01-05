@@ -32,8 +32,38 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "391"
             endingLineNumber = "391"
-            landmarkName = "toggleBookmark()"
+            landmarkName = "checkBookmarkStatus()"
             landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "F2D45491-E4B9-4FC1-A465-68CD9E1E976C - d8541f0199c5025d"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "(3) suspend resume partial function for MovieApp_Team_4__A.MoviesDetailsView.checkBookmarkStatus() async -&gt; ()"
+                  moduleName = "MovieApp_Team-4-_A.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/reemaalkhelaiwi/Documents/MovieApp_Team-4-_A1/MovieApp_Team-4-_A/Views/MoviesDetailsView.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "391"
+                  endingLineNumber = "391">
+               </Location>
+               <Location
+                  uuid = "F2D45491-E4B9-4FC1-A465-68CD9E1E976C - 8c8d00aa1530a062"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "(4) suspend resume partial function for MovieApp_Team_4__A.MoviesDetailsView.checkBookmarkStatus() async -&gt; ()"
+                  moduleName = "MovieApp_Team-4-_A.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/reemaalkhelaiwi/Documents/MovieApp_Team-4-_A1/MovieApp_Team-4-_A/Views/MoviesDetailsView.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "391"
+                  endingLineNumber = "391">
+               </Location>
+            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>
