@@ -25,12 +25,11 @@ struct ProfileHomeView: View {
                 Spacer()
             }
 
-            // Profile title
             Text("Profile")
                 .font(.largeTitle.bold())
                 .foregroundColor(.white)
 
-            // User card (opens edit screen)
+            // User card
             NavigationLink(
                 destination: ProfileInfoView(
                     vm: vm,
@@ -68,16 +67,13 @@ struct ProfileHomeView: View {
                 .cornerRadius(12)
             }
 
-            // Saved movies
             Text("Saved movies")
                 .font(.title2.bold())
                 .foregroundColor(.white)
 
             if vm.isLoading {
                 ProgressView().tint(.white)
-                Spacer()
             } else if vm.savedMovies.isEmpty {
-                Spacer()
                 VStack(spacing: 12) {
                     Image(systemName: "video.fill")
                         .font(.system(size: 60))
@@ -87,7 +83,6 @@ struct ProfileHomeView: View {
                         .foregroundColor(.gray)
                 }
                 .frame(maxWidth: .infinity)
-                Spacer()
             } else {
                 ScrollView {
                     VStack(spacing: 12) {
@@ -105,7 +100,6 @@ struct ProfileHomeView: View {
 
             Spacer()
 
-            // ✅ Sign Out
             Button(role: .destructive) {
                 isAuthenticated = false
                 signedInEmail = ""
@@ -126,7 +120,7 @@ struct ProfileHomeView: View {
     }
 }
 
-// ✅ Edit Profile screen (Name + Email editable)
+// MARK: - Profile Info View
 struct ProfileInfoView: View {
 
     @ObservedObject var vm: ProfileViewModel
@@ -136,21 +130,24 @@ struct ProfileInfoView: View {
     @Environment(\.dismiss) var dismiss
 
     @State private var isEditing = false
-    @State private var editName: String = ""
-    @State private var editEmail: String = ""
-
-    // ✅ ADDED: email validation error
+    @State private var editName = ""
+    @State private var editEmail = ""
     @State private var emailError: String?
 
-    @State private var selectedItem: PhotosPickerItem? = nil
-    @State private var selectedImage: UIImage? = nil
+    @State private var selectedItem: PhotosPickerItem?
+    @State private var selectedImage: UIImage?
+
+    // ✅ Dummy image URL (Pinterest)
+    private let dummyImageURL =
+    "https://i.pinimg.com/1200x/7e/fd/0f/7efd0f809a51439d0a75e7a8c414f0f5.jpg"
 
     var body: some View {
         VStack(spacing: 0) {
 
+            // Header
             HStack {
                 Button { dismiss() } label: {
-                    HStack(spacing: 4) {
+                    HStack {
                         Image(systemName: "chevron.left")
                         Text("Back")
                     }
@@ -160,18 +157,17 @@ struct ProfileInfoView: View {
                 Spacer()
 
                 Text(isEditing ? "Edit profile" : "Profile info")
-                    .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(.white)
+                    .font(.system(size: 17, weight: .semibold))
 
                 Spacer()
 
                 Button {
                     if isEditing {
 
-                        let trimmedEmail = editEmail
-                            .trimmingCharacters(in: .whitespacesAndNewlines)
+                        let trimmedEmail =
+                        editEmail.trimmingCharacters(in: .whitespacesAndNewlines)
 
-                        // ✅ EMAIL RULES (@ and .com)
                         guard trimmedEmail.contains("@"),
                               trimmedEmail.contains(".com") else {
                             emailError = "Email must contain @ and .com"
@@ -181,11 +177,13 @@ struct ProfileInfoView: View {
                         emailError = nil
 
                         Task {
+                            await vm.saveProfileImage(imageURL: dummyImageURL)
                             await vm.saveProfileEdits(
                                 name: editName,
                                 email: trimmedEmail
                             )
 
+                            vm.profileImage = dummyImageURL
                             vm.name = editName
                             vm.email = trimmedEmail
                             signedInEmail = trimmedEmail
@@ -197,7 +195,6 @@ struct ProfileInfoView: View {
                     } else {
                         editName = vm.name
                         editEmail = vm.email
-                        emailError = nil
                         isEditing = true
                     }
                 } label: {
@@ -208,48 +205,53 @@ struct ProfileInfoView: View {
             .padding()
             .background(Color.black)
 
-            Divider()
-                .background(Color.white.opacity(0.3))
+            Divider().background(Color.white.opacity(0.3))
 
             ScrollView {
                 VStack {
 
+                    // Profile Image
                     PhotosPicker(selection: $selectedItem, matching: .images) {
                         ZStack {
-                            if let selectedImage {
-                                Image(uiImage: selectedImage)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 100, height: 100)
-                                    .clipShape(Circle())
-                            } else if let url = URL(string: vm.profileImage),
-                                      !vm.profileImage.isEmpty {
-                                AsyncImage(url: url) { img in
-                                    img.resizable().scaledToFill()
-                                } placeholder: {
-                                    Image(systemName: "person.crop.circle.fill")
+                            Group {
+                                if let selectedImage {
+                                    Image(uiImage: selectedImage)
                                         .resizable()
-                                        .foregroundColor(.gray)
+                                } else {
+                                    AsyncImage(url: URL(string: vm.profileImage)) { image in
+                                        image.resizable()
+                                    } placeholder: {
+                                        Image(systemName: "person.crop.circle.fill")
+                                            .resizable()
+                                            .foregroundColor(.gray)
+                                    }
                                 }
-                                .frame(width: 100, height: 100)
-                                .clipShape(Circle())
-                            } else {
-                                Image(systemName: "person.crop.circle.fill")
-                                    .resizable()
-                                    .frame(width: 100, height: 100)
-                                    .foregroundColor(.gray)
                             }
+                            .scaledToFill()
+                            .frame(width: 100, height: 100)
+                            .clipShape(Circle())
 
                             if isEditing {
                                 Circle()
                                     .fill(Color.black.opacity(0.4))
                                     .frame(width: 100, height: 100)
+
                                 Image(systemName: "camera.fill")
                                     .foregroundColor(Color("gold1"))
                             }
                         }
                     }
                     .disabled(!isEditing)
+                    .onChange(of: selectedItem) { newItem in   // ✅ ADD THIS LINE HERE
+                        guard let newItem else { return }
+                        Task {
+                            if let data = try? await newItem.loadTransferable(type: Data.self),
+                               let uiImage = UIImage(data: data) {
+                                selectedImage = uiImage   // ✅ show instantly
+                            }
+                        }
+                    }
+
                     .padding(.top, 40)
                     .padding(.bottom, 30)
 
@@ -261,7 +263,6 @@ struct ProfileInfoView: View {
                         )
 
                         Divider().background(Color.white.opacity(0.1))
-                            .padding(.leading)
 
                         InfoField(
                             label: "Email",
@@ -269,7 +270,6 @@ struct ProfileInfoView: View {
                             isEditing: isEditing
                         )
 
-                        // ✅ EMAIL ERROR MESSAGE
                         if let emailError {
                             Text(emailError)
                                 .foregroundColor(.red)
@@ -308,14 +308,14 @@ struct ProfileInfoView: View {
     }
 }
 
-// Helper component
+// MARK: - Helper Field
 struct InfoField: View {
     let label: String
     @Binding var value: String
     let isEditing: Bool
 
     var body: some View {
-        HStack(spacing: 20) {
+        HStack {
             Text(label)
                 .foregroundColor(.white)
                 .frame(width: 100, alignment: .leading)
@@ -323,8 +323,6 @@ struct InfoField: View {
             if isEditing {
                 TextField("", text: $value)
                     .foregroundColor(.white)
-                    .tint(Color("gold1"))
-                    .autocorrectionDisabled()
                     .textInputAutocapitalization(.none)
             } else {
                 Text(value)
@@ -338,6 +336,7 @@ struct InfoField: View {
     }
 }
 
+// MARK: - Preview
 #Preview {
     NavigationStack {
         ProfileHomeView(

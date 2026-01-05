@@ -63,4 +63,24 @@ final class ProfileViewModel: ObservableObject {
             print("❌ Save profile error:", error.localizedDescription)
         }
     }
+    // MARK: - SAVE PROFILE IMAGE (URL only)
+    func saveProfileImage(imageURL: String) async {
+        guard let recordID = userRecordID else {
+            print("❌ Missing user record ID")
+            return
+        }
+
+        do {
+            try await apiService.updateUserProfileImage(
+                recordID: recordID,
+                imageURL: imageURL
+            )
+
+            // ✅ Update UI after successful save
+            self.profileImage = imageURL
+
+        } catch {
+            print("❌ Failed to save profile image:", error.localizedDescription)
+        }
+    }
 }
