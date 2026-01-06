@@ -12,26 +12,26 @@ struct MoviesCenterView: View {
         NavigationStack {
             ZStack {
                 Color.black.ignoresSafeArea()
-
+                
                 ScrollView {
                     VStack(spacing: 24) {
-
+                        
                         header
-
+                        
                         searchBar
-
+                        
                         if viewModel.isLoading {
                             ProgressView()
                                 .tint(.white)
                                 .padding()
                         }
-
+                        
                         MovieHorizontalRow(
                             title: "Highly Rated",
                             movies: viewModel.highlyRatedMovies,
                             isLarge: true
                         )
-
+                        
                         ForEach(viewModel.genres, id: \.self) { genre in
                             MovieHorizontalRow(
                                 title: genre,
@@ -46,30 +46,33 @@ struct MoviesCenterView: View {
             }
             .navigationDestination(for: AppRoute.self) { route in
                 switch route {
-
+                    
                 case .writeReview(let movieId, let userId):
                     WriteReviewView(
                         movieId: movieId,
                         userId: userId
                     )
-
+                    
                 case .genre(let genre):
                     let genreMovies = viewModel.moviesByGenre[genre] ?? []
                     MovieGridView(title: genre, movies: genreMovies)
                 }
             }
-
-
+            
+            
         }
         .task {
             await viewModel.loadMovies()
-
+            
             if profileVM.email != signedInEmail {
                 await profileVM.loadProfile(email: signedInEmail)
             }
         }
-
     }
+
+
+    
+
 
 
 private var header: some View {

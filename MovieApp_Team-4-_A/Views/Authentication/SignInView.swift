@@ -141,10 +141,20 @@ struct SignInView: View {
                             signedInEmail = user.fields.email
                             isAuthenticated = true
 
-                        } catch {
-                            loginError = "Invalid email or password"
+                        } catch let error as APIError {
+                            switch error {
+                            case .unauthorized:
+                                loginError = "Service unavailable. Please try again later."
+                            default:
+                                loginError = "Invalid email or password"
+                            }
                             isAuthenticated = false
                         }
+                        catch {
+                            loginError = "Something went wrong. Please try again."
+                            isAuthenticated = false
+                        }
+
                     }
 
                 } label: {

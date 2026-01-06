@@ -8,7 +8,8 @@ class MovieViewModel: ObservableObject {
     @Published var movies: [MovieRecord] = []
     @Published var searchText: String = ""
     @Published var isLoading = false
-
+    @Published var errorMessage: String? = nil
+    
     private let apiService = APIService()
 
     // This is the core logic for search functionality
@@ -33,11 +34,24 @@ class MovieViewModel: ObservableObject {
 
     func loadMovies() async {
         isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
         do {
             movies = try await apiService.fetchMovies()
+        } catch let error as APIError {
+            switch error {
+            case .requestFailed(let statusCode):
+                errorMessage = "Server error \(statusCode). Please try again later."
+            case .serverError:
+                errorMessage = "Server is unavailable. Please try again later."
+            case .unauthorized:
+                errorMessage = "Session expired. Please sign in again."
+            default:
+                errorMessage = "Something went wrong. Please try again."
+            }
         } catch {
-            print("❌ Error:", error)
+            errorMessage = "Something went wrong. Please try again."
         }
-        isLoading = false
     }
 }

@@ -3,7 +3,7 @@ import Foundation
 class APIService {
     
     private let baseURL = "https://api.airtable.com/v0/appsfcB6YESLj4NCN"
-    // Note: Breaking this token below allows you to test "Session Expired" (Test #2)
+    // INVALID_TOKEN
     private let token = "Bearer pat7E88yW3dgzlY61.2b7d03863aca9f1262dcb772f7728bd157e695799b43c7392d5faf4f52fcb001"
     
     // MARK: - Generic Helper

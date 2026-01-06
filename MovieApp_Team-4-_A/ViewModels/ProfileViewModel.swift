@@ -10,6 +10,8 @@ final class ProfileViewModel: ObservableObject {
     @Published var profileImage: String = ""
     @Published var savedMovies: [MovieRecord] = []
     @Published var isLoading = false
+    @Published var errorMessage: String? = nil
+
 
     private(set) var userRecordID: String?
     private let apiService = APIService()
@@ -29,9 +31,21 @@ final class ProfileViewModel: ObservableObject {
             self.profileImage = result.user.fields.profileImage ?? ""
             self.savedMovies = result.savedMovies
 
+        } catch let error as APIError {
+            switch error {
+            case .requestFailed(let statusCode):
+                errorMessage = "Server error \(statusCode). Please try again later."
+            case .serverError:
+                errorMessage = "Server is unavailable. Please try again later."
+            case .unauthorized:
+                errorMessage = "Session expired. Please sign in again."
+            default:
+                errorMessage = "Something went wrong. Please try again."
+            }
         } catch {
-            print("❌ Profile load error:", error)
+            errorMessage = "Something went wrong. Please try again."
         }
+
     }
 
     // MARK: - SAVE PROFILE EDITS (THIS WAS MISSING)
@@ -53,9 +67,21 @@ final class ProfileViewModel: ObservableObject {
             self.name = cleanName
             self.email = cleanEmail
 
+        } catch let error as APIError {
+            switch error {
+            case .requestFailed(let statusCode):
+                errorMessage = "Server error \(statusCode). Please try again later."
+            case .serverError:
+                errorMessage = "Server is unavailable. Please try again later."
+            case .unauthorized:
+                errorMessage = "Session expired. Please sign in again."
+            default:
+                errorMessage = "Something went wrong. Please try again."
+            }
         } catch {
-            print("❌ Save profile error:", error.localizedDescription)
+            errorMessage = "Something went wrong. Please try again."
         }
+
     }
     // MARK: - SAVE PROFILE IMAGE (URL only)
     func saveProfileImage(imageURL: String) async {
@@ -72,8 +98,20 @@ final class ProfileViewModel: ObservableObject {
 
             self.profileImage = imageURL
 
+        } catch let error as APIError {
+            switch error {
+            case .requestFailed(let statusCode):
+                errorMessage = "Server error \(statusCode). Please try again later."
+            case .serverError:
+                errorMessage = "Server is unavailable. Please try again later."
+            case .unauthorized:
+                errorMessage = "Session expired. Please sign in again."
+            default:
+                errorMessage = "Something went wrong. Please try again."
+            }
         } catch {
-            print("❌ Failed to save profile image:", error.localizedDescription)
+            errorMessage = "Something went wrong. Please try again."
         }
+
     }
 }

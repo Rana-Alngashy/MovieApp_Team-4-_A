@@ -12,7 +12,8 @@ class MovieDetailsViewModel: ObservableObject {
     @Published var movieActors: [ActorRecord] = []
     @Published var movieDirectors: [DirectorRecord] = []
     @Published var isLoading: Bool = false
-    
+    @Published var errorMessage: String? = nil
+
     // MARK: - Private Properties
     private let apiService = APIService()
     
@@ -36,9 +37,21 @@ class MovieDetailsViewModel: ObservableObject {
             
             movieActors = try await actorsTask
             movieDirectors = try await directorsTask
+        } catch let error as APIError {
+            switch error {
+            case .requestFailed(let statusCode):
+                errorMessage = "Server error \(statusCode). Please try again later."
+            case .serverError:
+                errorMessage = "Server is unavailable. Please try again later."
+            case .unauthorized:
+                errorMessage = "Session expired. Please sign in again."
+            default:
+                errorMessage = "Something went wrong. Please try again."
+            }
         } catch {
-            print("Failed to load actors/directors: \(error)")
+            errorMessage = "Something went wrong. Please try again."
         }
+
     }
     
     // MARK: - Load User Data
@@ -49,18 +62,42 @@ class MovieDetailsViewModel: ObservableObject {
             
             await loadReviews(movieId: movieId)
             await checkBookmarkStatus(movieId: movieId)
+        } catch let error as APIError {
+            switch error {
+            case .requestFailed(let statusCode):
+                errorMessage = "Server error \(statusCode). Please try again later."
+            case .serverError:
+                errorMessage = "Server is unavailable. Please try again later."
+            case .unauthorized:
+                errorMessage = "Session expired. Please sign in again."
+            default:
+                errorMessage = "Something went wrong. Please try again."
+            }
         } catch {
-            print("Failed to load user: \(error)")
+            errorMessage = "Something went wrong. Please try again."
         }
+
     }
     
     // MARK: - Load Reviews
     func loadReviews(movieId: String) async {
         do {
             reviews = try await apiService.fetchMovieReviews(movieId: movieId)
+        } catch let error as APIError {
+            switch error {
+            case .requestFailed(let statusCode):
+                errorMessage = "Server error \(statusCode). Please try again later."
+            case .serverError:
+                errorMessage = "Server is unavailable. Please try again later."
+            case .unauthorized:
+                errorMessage = "Session expired. Please sign in again."
+            default:
+                errorMessage = "Something went wrong. Please try again."
+            }
         } catch {
-            print("Failed to load reviews: \(error)")
+            errorMessage = "Something went wrong. Please try again."
         }
+
     }
     
     // MARK: - Check Bookmark Status
@@ -69,9 +106,21 @@ class MovieDetailsViewModel: ObservableObject {
         do {
             savedMovieRecordId = try await apiService.checkIfMovieSaved(userId: currentUserId, movieId: movieId)
             isBookmarked = savedMovieRecordId != nil
+        } catch let error as APIError {
+            switch error {
+            case .requestFailed(let statusCode):
+                errorMessage = "Server error \(statusCode). Please try again later."
+            case .serverError:
+                errorMessage = "Server is unavailable. Please try again later."
+            case .unauthorized:
+                errorMessage = "Session expired. Please sign in again."
+            default:
+                errorMessage = "Something went wrong. Please try again."
+            }
         } catch {
-            print("Failed to check bookmark: \(error)")
+            errorMessage = "Something went wrong. Please try again."
         }
+
     }
     
     // MARK: - Toggle Bookmark
@@ -91,9 +140,21 @@ class MovieDetailsViewModel: ObservableObject {
                 isBookmarked = true
                 savedMovieRecordId = newSavedId
             }
+        } catch let error as APIError {
+            switch error {
+            case .requestFailed(let statusCode):
+                errorMessage = "Server error \(statusCode). Please try again later."
+            case .serverError:
+                errorMessage = "Server is unavailable. Please try again later."
+            case .unauthorized:
+                errorMessage = "Session expired. Please sign in again."
+            default:
+                errorMessage = "Something went wrong. Please try again."
+            }
         } catch {
-            print("Failed to toggle bookmark: \(error)")
+            errorMessage = "Something went wrong. Please try again."
         }
+
     }
     
     // MARK: - Format Date
