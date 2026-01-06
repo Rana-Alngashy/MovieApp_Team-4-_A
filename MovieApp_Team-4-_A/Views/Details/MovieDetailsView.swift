@@ -4,10 +4,10 @@ import SwiftUI
 struct MoviesDetailsView: View {
     
     // MARK: - Properties
-    let movie: MovieRecord
+    let movie: MovieRecord  //brings the selected movie details
     let signedInEmail: String
     
-    // MARK: - ViewModel
+    // MARK: - Linked with ViewModel
     @StateObject private var viewModel = MovieDetailsViewModel()
     
     @Environment(\.dismiss) private var dismiss
@@ -20,170 +20,186 @@ struct MoviesDetailsView: View {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
                     
-                    // MARK: - Hero Image Section
-                    ZStack(alignment: .top) {
-                        AsyncImage(url: URL(string: movie.fields.poster)) { phase in
-                            switch phase {
-                            case .empty:
-                                Rectangle()
-                                    .fill(Color.gray.opacity(0.3))
-                                    .frame(width: 390, height: 444)
-                                    .overlay(ProgressView().tint(.white))
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .frame(width: 390, height: 444)
-                                    .clipped()
-                            case .failure:
-                                Rectangle()
-                                    .fill(Color.gray.opacity(0.3))
-                                    .frame(width: 390, height: 444)
-                                    .overlay(
-                                        Image(systemName: "photo")
-                                            .font(.system(size: 40))
-                                            .foregroundColor(.gray)
-                                    )
-                            @unknown default:
-                                EmptyView()
-                            }
+                    // MARK: - Poster Image Section
+ZStack(alignment: .top) {
+AsyncImage(url: URL(string: movie.fields.poster)) { phase in
+switch phase {
+    
+case .empty:
+Rectangle()
+.fill(Color.gray.opacity(0.3))
+.frame(width: 390, height: 444)
+.overlay(ProgressView().tint(.white))
+
+case .success(let image):
+image
+.resizable()
+.aspectRatio(contentMode: .fill)
+.frame(width: 390, height: 444)
+.clipped()
+
+case .failure:
+    Rectangle()
+    .fill(Color.gray.opacity(0.3))
+    .frame(width: 390, height: 444)
+    .overlay(
+    Image(systemName: "photo")
+    .font(.system(size: 40))
+    .foregroundColor(.gray)
+        )
+@unknown default:
+    EmptyView()}
                         }
                         
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                .clear,
-                                .clear,
-                                Color.black.opacity(0.8),
-                                Color.black
+        LinearGradient(
+        gradient: Gradient(colors: [
+        .clear,
+        .clear,
+        Color.black.opacity(0.8),
+        Color.black
                             ]),
                             startPoint: .top,
                             endPoint: .bottom
                         )
                         .frame(height: 444)
                         
-                        // MARK: Navigation Bar (Buttons)
-                        HStack {
-                            Button(action: {
-                                dismiss()
+    // MARK: Navigation Bar (Buttons)
+        
+    HStack {
+//        back buttton
+    Button(action: {
+            dismiss()
                             }) {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.yellow)
-                                    .frame(width: 40, height: 40)
-                                    .background(Color.black.opacity(0.6)) // Black Glass
-                                    .clipShape(Circle())
-                            }
+    Image(systemName: "chevron.left")
+    .font(.system(size: 18, weight: .semibold))
+    .foregroundColor(.yellow)
+    .frame(width: 40, height: 40)
+    .background(Color.black.opacity(0.6)) // Black Glass
+    .clipShape(Circle())}
                             
-                            Spacer()
-                            
-                            Button(action: {
-                                shareMovie()
+            
+        Spacer()
+//          share button
+    Button(action: {
+        shareMovie()
                             }) {
-                                Image(systemName: "square.and.arrow.up")
-                                    .font(.system(size: 18, weight: .medium))
-                                    .foregroundColor(.yellow)
-                                    .frame(width: 40, height: 40)
-                                    .background(Color.black.opacity(0.6)) // Black Glass
-                                    .clipShape(Circle())
-                            }
-                            .padding(.trailing, 8)
-                            
-                            Button(action: {
-                                Task {
-                                    await viewModel.toggleBookmark(movieId: movie.id)
-                                }
-                            }) {
-                                Image(systemName: viewModel.isBookmarked ? "bookmark.fill" : "bookmark")
-                                    .font(.system(size: 18, weight: .medium))
-                                    .foregroundColor(.yellow)
-                                    .frame(width: 40, height: 40)
-                                    .background(Color.black.opacity(0.6)) // Black Glass
-                                    .clipShape(Circle())
+    Image(systemName: "square.and.arrow.up")
+    .font(.system(size: 18, weight: .medium))
+    .foregroundColor(.yellow)
+    .frame(width: 40, height: 40)
+    .background(Color.black.opacity(0.6)) // Black Glass
+    .clipShape(Circle())}
+    .padding(.trailing, 8)
+         
+//        save button
+    Button(action: {
+        Task {
+            await viewModel.toggleBookmark(movieId: movie.id)
+                                }})
+        {
+    Image(systemName: viewModel.isBookmarked ? "bookmark.fill" : "bookmark")
+        .font(.system(size: 18, weight: .medium))
+        .foregroundColor(.yellow)
+        .frame(width: 40, height: 40)
+        .background(Color.black.opacity(0.6)) // Black Glass
+        .clipShape(Circle())
                             }
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 50)
                         
-                        VStack(alignment: .leading) {
-                            Spacer()
-                            Text(movie.fields.name)
-                                .font(.system(size: 32, weight: .bold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 16)
-                                .padding(.bottom, 16)
-                        }
-                        .frame(height: 444)
+VStack(alignment: .leading) {
+Spacer()
+Text(movie.fields.name)
+.font(.system(size: 32, weight: .bold))
+.foregroundColor(.white)
+.padding(.horizontal, 16)
+.padding(.bottom, 16)}
+.frame(height: 444)
                     }
                     
-                    // MARK: - Movie Metadata Section
-                    HStack(alignment: .top, spacing: 40) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Duration")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.white)
-                            Text(movie.fields.runtime)
-                                .font(.system(size: 14))
-                                .foregroundColor(.gray)
+// MARK: - Movie Metadata Section
+                    
+HStack(alignment: .top, spacing: 40) {
+    
+VStack(alignment: .leading, spacing: 4) {
+    
+Text("Duration")
+.font(.system(size: 14, weight: .medium))
+.foregroundColor(.white)
+    
+    
+Text(movie.fields.runtime)
+.font(.system(size: 14))
+.foregroundColor(.gray)
                         }
                         
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Language")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.white)
-                            Text(movie.fields.language.joined(separator: ", "))
-                                .font(.system(size: 14))
-                                .foregroundColor(.gray)
+VStack(alignment: .leading, spacing: 4) {
+    
+Text("Language")
+.font(.system(size: 14, weight: .medium))
+.foregroundColor(.white)
+    
+Text(movie.fields.language.joined(separator: ", "))
+.font(.system(size: 14))
+.foregroundColor(.gray)
                         }
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
                     
-                    HStack(alignment: .top, spacing: 40) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Genre")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.white)
-                            Text(movie.fields.genre.joined(separator: ", "))
-                                .font(.system(size: 14))
-                                .foregroundColor(.gray)
+HStack(alignment: .top, spacing: 40) {
+    
+    VStack(alignment: .leading, spacing: 4) {
+                          
+        Text("Genre")
+        .font(.system(size: 14, weight: .medium))
+        .foregroundColor(.white)
+        
+        Text(movie.fields.genre.joined(separator: ", "))
+           .font(.system(size: 14))
+            .foregroundColor(.gray)
                         }
-                        .frame(width: 100, alignment: .leading)
+            .frame(width: 100, alignment: .leading)
                         
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Age")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.white)
-                            Text(movie.fields.rating)
-                                .font(.system(size: 14))
-                                .foregroundColor(.gray)
+    VStack(alignment: .leading, spacing: 4) {
+        
+                Text("Age")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.white)
+                Text(movie.fields.rating)
+                .font(.system(size: 14))
+                .foregroundColor(.gray)
                         }
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
                     
                     // MARK: - Story Section
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Story")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.white)
+    VStack(alignment: .leading, spacing: 8) {
                         
-                        Text(movie.fields.story)
-                            .font(.system(size: 14))
-                            .foregroundColor(.gray)
-                            .lineSpacing(4)
+                  Text("Story")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.white)
+                        
+                Text(movie.fields.story)
+                .font(.system(size: 14))
+                .foregroundColor(.gray)
+                .lineSpacing(4)
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 24)
                     
                     // MARK: - IMDb Rating Section
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("IMDb Rating")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
                         
-                        Text(String(format: "%.1f / 10", movie.fields.imdbRating))
-                            .font(.system(size: 14))
-                            .foregroundColor(.gray)
+                        Text("IMDb Rating")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+                        
+    Text(String(format: "%.1f / 10", movie.fields.imdbRating))
+        .font(.system(size: 14))
+        .foregroundColor(.gray)
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 24)
@@ -197,6 +213,7 @@ struct MoviesDetailsView: View {
                     
                     // MARK: - Director Section (FROM API)
                     VStack(alignment: .leading, spacing: 12) {
+                        
                         Text("Director")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.white)
@@ -334,6 +351,7 @@ struct MoviesDetailsView: View {
     }
     
     // MARK: - Share Movie
+   
     private func shareMovie() {
         let shareText = "Check out \(movie.fields.name)!"
         let activityVC = UIActivityViewController(activityItems: [shareText], applicationActivities: nil)
@@ -345,6 +363,8 @@ struct MoviesDetailsView: View {
     }
 }
 
+    
+    
 // MARK: - Person Card (for Directors & Actors)
 struct PersonCard: View {
     let name: String
@@ -398,6 +418,7 @@ struct PersonCard: View {
 }
 
 // MARK: - Review Card
+
 struct ReviewCard: View {
     let profileImage: String
     let reviewerName: String
@@ -460,25 +481,3 @@ struct ReviewCard: View {
     }
 }
 
-// MARK: - Preview
-struct MoviesDetailsView_Previews: PreviewProvider {
-    static var previews: some View {
-        let sampleFields = MovieFields(
-            name: "The Shawshank Redemption",
-            poster: "https://i.imghippo.com/files/mHB5371A.jpg",
-            story: "Chronicles the experiences of a formerly successful banker as a prisoner in the gloomy jailhouse of Shawshank.",
-            runtime: "2h 22m",
-            genre: ["Drama"],
-            rating: "R",
-            imdbRating: 9.3,
-            language: ["English"],
-            actors: ["Tim Robbins", "Morgan Freeman"]
-        )
-        let sampleMovie = MovieRecord(id: "recfNj1e4waOUJLxd", fields: sampleFields)
-        
-        NavigationStack {
-            MoviesDetailsView(movie: sampleMovie, signedInEmail: "Noora@gmail.com")
-        }
-        .preferredColorScheme(.dark)
-    }
-}

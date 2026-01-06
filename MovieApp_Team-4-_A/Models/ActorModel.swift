@@ -22,3 +22,5 @@ struct ActorFields: Codable {
     let name: String
     let image: String?
 }
+
+
