@@ -3,6 +3,11 @@
 //  MovieApp_Team-4-_A
 //
 //  Created by Rana Alngashy on 16/07/1447 AH.
+//
+//  MovieHorizontalRow.swift
+//  MovieApp_Team-4-_A
+//
+//  Created by Rana Alngashy on 16/07/1447 AH.
 
 import SwiftUI
 
@@ -21,8 +26,8 @@ struct MovieHorizontalRow: View {
                 Spacer()
                 
                 if !isLarge {
-                    // ✅ Updated: Now uses NavigationLink instead of an empty Button
-                    NavigationLink(value: title) {
+                    // ✅ FIXED: Pass AppRoute.genre(title) instead of just the String
+                    NavigationLink(value: AppRoute.genre(title)) {
                         Text("Show more")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(Color(.gold1))

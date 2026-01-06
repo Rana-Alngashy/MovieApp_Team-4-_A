@@ -5,6 +5,7 @@
 //  Created by Rana Alngashy on 16/07/1447 AH.
 //
 
+
 import SwiftUI
 
 // MARK: - Main View
@@ -326,8 +327,11 @@ struct MoviesDetailsView: View {
                 )
             }
         }
-        .task {
-            await viewModel.loadAllData(movieId: movie.id, signedInEmail: signedInEmail)
+        // ⭐️ UPDATED: Using .onAppear ensures data reloads when you come back from "Write Review"
+        .onAppear {
+            Task {
+                await viewModel.loadAllData(movieId: movie.id, signedInEmail: signedInEmail)
+            }
         }
     }
     

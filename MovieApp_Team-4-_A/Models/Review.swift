@@ -1,4 +1,3 @@
-
 import Foundation
 
 enum AppRoute: Hashable {
@@ -6,20 +5,22 @@ enum AppRoute: Hashable {
     case genre(String)
 }
 
-
-struct ReviewResponse: Codable, Sendable { // Added Sendable
+struct ReviewResponse: Codable, Sendable {
     let records: [ReviewRecord]
 }
 
-struct ReviewRecord: Codable, Identifiable, Sendable { // Added Sendable
+struct ReviewRecord: Codable, Identifiable, Sendable {
     let id: String
     let createdTime: String
     let fields: ReviewFields
 }
 
-struct ReviewFields: Codable, Sendable { // Added Sendable
+struct ReviewFields: Codable, Sendable {
     let reviewText: String?
     let rate: Double?
+    
+    // ✅ FIXED: Changed back to String? based on your Postman file.
+    // The error -1011 happened because we tried to use [String].
     let movieId: String?
     let userId: String?
     

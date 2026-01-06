@@ -4,6 +4,12 @@
 //
 //  Created by Rana Alngashy on 04/07/1447 AH.
 //
+//
+//  WriteReviewView.swift
+//  Movies
+//
+//  Created by Rana Alngashy on 04/07/1447 AH.
+//
 import SwiftUI
 
 struct WriteReviewView: View {
@@ -15,6 +21,11 @@ struct WriteReviewView: View {
 
     @State private var reviewText: String = ""
     @State private var rating: Int = 0
+    
+    // ⭐️ Added for error handling
+    @State private var showError = false
+    @State private var errorMessage = ""
+    @State private var isSubmitting = false
 
     // Brand color
     let brandGold = Color(red: 0.9, green: 0.7, blue: 0.2)
@@ -43,24 +54,19 @@ struct WriteReviewView: View {
 
                 Spacer()
 
-                // ✅ ADD REVIEW BUTTON (FIXED)
-                Button {
-                    Task {
-                        do {
-                            try await apiService.postReview(
-                                movieId: movieId,
-                                userId: userId,
-                                text: reviewText,
-                                rating: rating * 2 // ⭐️ 1–5 UI → 1–10 Airtable
-                            )
-                            dismiss()
-                        } catch {
-                            print("❌ Failed to post review:", error)
-                        }
+                // ✅ ADD REVIEW BUTTON
+                if isSubmitting {
+                    ProgressView()
+                        .tint(brandGold)
+                } else {
+                    Button {
+                        submitReview()
+                    } label: {
+                        Text("Add")
+                            .foregroundColor(brandGold)
                     }
-                } label: {
-                    Text("Add")
-                        .foregroundColor(brandGold)
+                    .disabled(rating == 0 || reviewText.isEmpty) // Prevent empty reviews
+                    .opacity((rating == 0 || reviewText.isEmpty) ? 0.5 : 1.0)
                 }
             }
             .padding()
@@ -118,5 +124,40 @@ struct WriteReviewView: View {
         }
         .background(Color.black.ignoresSafeArea())
         .navigationBarHidden(true)
+        // ⭐️ Alert to show you the error if it fails
+        .alert("Error", isPresented: $showError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(errorMessage)
+        }
+    }
+    
+    private func submitReview() {
+        isSubmitting = true
+        Task {
+            do {
+                print("📝 Submitting Review - Movie: \(movieId), User: \(userId)")
+                
+                // ⭐️ 1–5 UI → 1–10 Airtable
+                let airtableRating = rating * 2
+                
+                let _ = try await apiService.postReview(
+                    movieId: movieId,
+                    userId: userId,
+                    text: reviewText,
+                    rating: airtableRating
+                )
+                
+                print("✅ Review posted successfully!")
+                isSubmitting = false
+                dismiss()
+                
+            } catch {
+                print("❌ Failed to post review: \(error)")
+                self.errorMessage = error.localizedDescription
+                self.showError = true
+                self.isSubmitting = false
+            }
+        }
     }
 }
