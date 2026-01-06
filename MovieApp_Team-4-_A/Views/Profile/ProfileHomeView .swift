@@ -128,7 +128,10 @@ struct ProfileHomeView: View {
                 ScrollView {
                     LazyVGrid(columns: columns, spacing: 12) {
                         ForEach(vm.savedMovies) { movie in
-                            SavedMovieCard(movie: movie)
+                            // ✅ FIXED: Added NavigationLink to Movie Details
+                            NavigationLink(destination: MoviesDetailsView(movie: movie, signedInEmail: signedInEmail)) {
+                                SavedMovieCard(movie: movie)
+                            }
                         }
                     }
                 }

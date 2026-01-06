@@ -4,7 +4,12 @@
 //
 //  Created by Rana Alngashy on 16/07/1447 AH.
 //
-
+//
+//  MovieDetailsView.swift
+//  MovieApp_Team-4-_A
+//
+//  Created by Rana Alngashy on 16/07/1447 AH.
+//
 
 import SwiftUI
 
@@ -69,29 +74,36 @@ struct MoviesDetailsView: View {
                         )
                         .frame(height: 444)
                         
-                        // MARK: Navigation Bar
+                        // MARK: Navigation Bar (Buttons)
                         HStack {
+                            // ✅ Back Button (Black Glass)
                             Button(action: {
                                 dismiss()
                             }) {
                                 Image(systemName: "chevron.left")
                                     .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.yellow)
                                     .frame(width: 40, height: 40)
-                                    .background(Color.white.opacity(0.2))
+                                    .background(Color.black.opacity(0.6)) // Black Glass
                                     .clipShape(Circle())
                             }
+                            
                             Spacer()
                             
+                            // ✅ Share Button (Black Glass)
                             Button(action: {
                                 shareMovie()
                             }) {
                                 Image(systemName: "square.and.arrow.up")
                                     .font(.system(size: 18, weight: .medium))
                                     .foregroundColor(.yellow)
+                                    .frame(width: 40, height: 40)
+                                    .background(Color.black.opacity(0.6)) // Black Glass
+                                    .clipShape(Circle())
                             }
-                            .padding(.trailing, 16)
+                            .padding(.trailing, 8)
                             
+                            // ✅ Save/Bookmark Button (Black Glass)
                             Button(action: {
                                 Task {
                                     await viewModel.toggleBookmark(movieId: movie.id)
@@ -100,6 +112,9 @@ struct MoviesDetailsView: View {
                                 Image(systemName: viewModel.isBookmarked ? "bookmark.fill" : "bookmark")
                                     .font(.system(size: 18, weight: .medium))
                                     .foregroundColor(.yellow)
+                                    .frame(width: 40, height: 40)
+                                    .background(Color.black.opacity(0.6)) // Black Glass
+                                    .clipShape(Circle())
                             }
                         }
                         .padding(.horizontal, 16)
