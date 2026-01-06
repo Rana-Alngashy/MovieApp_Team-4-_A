@@ -40,6 +40,16 @@ The data is then:
 - Filtered into categories such as **Highly Rated**
 - Grouped by **genre**
 
+### **Search & Filtering**
+
+To ensure a snappy user experience, search is implemented using **Client-Side Filtering**:
+
+The app fetches the movie dataset once.
+
+As the user types in the search bar, the `MovieViewModel` filters the local array by **Movie** **Name** or **Actor**.
+
+This avoids unnecessary API calls and provides instant, real-time results.
+
 ### **Movie Details & Cast**
 
 When a movie is selected, `MoviesDetailsView` loads:
