@@ -15,7 +15,7 @@ struct MovieHorizontalRow: View {
                 Spacer()
                 
                 if !isLarge {
-                    // ✅ FIXED: Pass AppRoute.genre(title) instead of just the String
+                    
                     NavigationLink(value: AppRoute.genre(title)) {
                         Text("Show more")
                             .font(.system(size: 14, weight: .medium))

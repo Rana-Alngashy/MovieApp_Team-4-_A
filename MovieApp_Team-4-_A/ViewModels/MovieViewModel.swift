@@ -12,7 +12,7 @@ class MovieViewModel: ObservableObject {
     
     private let apiService = APIService()
 
-    // This is the core logic for search functionality
+    // logic for search functionality
     var filteredMovies: [MovieRecord] {
         guard !searchText.isEmpty else { return movies }
 
@@ -53,5 +53,21 @@ class MovieViewModel: ObservableObject {
         } catch {
             errorMessage = "Something went wrong. Please try again."
         }
+    }
+    
+    var highlyRatedMovies: [MovieRecord] {
+        filteredMovies.filter { $0.fields.imdbRating >= 9.0 }
+            .sorted { $0.fields.imdbRating > $1.fields.imdbRating }
+    }
+
+    var moviesByGenre: [String: [MovieRecord]] {
+        Dictionary(grouping: filteredMovies.flatMap { movie in
+            movie.fields.genre.map { ($0, movie) }
+        }) { $0.0 }
+        .mapValues { $0.map { $0.1 } }
+    }
+
+    var genres: [String] {
+        moviesByGenre.keys.sorted()
     }
 }

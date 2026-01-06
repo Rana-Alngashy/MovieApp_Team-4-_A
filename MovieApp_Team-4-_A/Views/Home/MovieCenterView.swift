@@ -61,6 +61,7 @@ struct MoviesCenterView: View {
             
             
         }
+        // task modifier
         .task {
             await viewModel.loadMovies()
             
@@ -69,11 +70,6 @@ struct MoviesCenterView: View {
             }
         }
     }
-
-
-    
-
-
 
 private var header: some View {
         HStack {
@@ -110,21 +106,22 @@ private var header: some View {
             .padding(.top)
         }
     }
+    // search bar
     private var searchBar: some View {
         HStack {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.gray)
             
-            // ZStack allows us to layer a custom placeholder behind the TextField
+            
             ZStack(alignment: .leading) {
                 
-                // 1. Show this custom Text only when the search field is empty
+               
                 if viewModel.searchText.isEmpty {
                     Text("Search for Movie name, actors...")
-                        .foregroundColor(.white.opacity(0.6)) // 0.6 opacity looks best (distinct from typed text)
+                        .foregroundColor(.white.opacity(0.6))
                 }
                 
-                // 2. The actual TextField (Empty string "" for the title since we have a custom one)
+               
                 TextField("", text: $viewModel.searchText)
                     .foregroundColor(.white) // This makes the text YOU TYPE white
                     .autocorrectionDisabled()
@@ -160,7 +157,7 @@ struct MovieCard: View {
                     startPoint: .top,
                     endPoint: .bottom
                 )
-                .frame(width: UIScreen.main.bounds.width - 32, height: 200) // Adjust height as needed
+                .frame(width: UIScreen.main.bounds.width - 32, height: 200) 
                 .cornerRadius(12)
 
                 // 3. The Text Content
@@ -207,23 +204,7 @@ struct MovieCard: View {
                         }
                     }
 
-extension MovieViewModel {
-    var highlyRatedMovies: [MovieRecord] {
-        filteredMovies.filter { $0.fields.imdbRating >= 9.0 }
-            .sorted { $0.fields.imdbRating > $1.fields.imdbRating }
-    }
 
-    var moviesByGenre: [String: [MovieRecord]] {
-        Dictionary(grouping: filteredMovies.flatMap { movie in
-            movie.fields.genre.map { ($0, movie) }
-        }) { $0.0 }
-        .mapValues { $0.map { $0.1 } }
-    }
-
-    var genres: [String] {
-        moviesByGenre.keys.sorted()
-    }
-}
 struct MovieGridView: View {
     let title: String
     let movies: [MovieRecord]

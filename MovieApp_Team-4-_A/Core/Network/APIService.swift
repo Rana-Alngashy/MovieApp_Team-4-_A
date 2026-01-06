@@ -11,11 +11,11 @@ class APIService {
         guard let url = URL(string: urlString) else {
             throw APIError.invalidURL
         }
-        
+        // prepare request
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue(token, forHTTPHeaderField: "Authorization")
-        
+        // encode json body
         if let body = body {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             do {
@@ -25,14 +25,14 @@ class APIService {
             }
         }
         
-        do {
+        do {// send request using url session
             let (data, response) = try await URLSession.shared.data(for: request)
-            
+            // check http status
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw APIError.requestFailed(statusCode: 0)
             }
             
-            // ERROR HANDLING LOGIC (Tests #2 & #3)
+         
             switch httpResponse.statusCode {
             case 200...299:
                 break
@@ -50,12 +50,12 @@ class APIService {
                 throw APIError.requestFailed(statusCode: httpResponse.statusCode)
             }
             
-            // Handle DELETE empty response case
+           
             if method == "DELETE" && data.isEmpty {
-                 // Return empty data if T allows, or handle specifically.
+              
             }
             
-            // Test #4: Decoding Error happens here if data doesn't match struct
+            // decode json
             let decoded = try JSONDecoder().decode(T.self, from: data)
             return decoded
             
