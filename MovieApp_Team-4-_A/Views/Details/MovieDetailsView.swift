@@ -1,16 +1,3 @@
-//
-//  MovieDetailsView.swift
-//  MovieApp_Team-4-_A
-//
-//  Created by Rana Alngashy on 16/07/1447 AH.
-//
-//
-//  MovieDetailsView.swift
-//  MovieApp_Team-4-_A
-//
-//  Created by Rana Alngashy on 16/07/1447 AH.
-//
-
 import SwiftUI
 
 // MARK: - Main View
@@ -76,7 +63,6 @@ struct MoviesDetailsView: View {
                         
                         // MARK: Navigation Bar (Buttons)
                         HStack {
-                            // ✅ Back Button (Black Glass)
                             Button(action: {
                                 dismiss()
                             }) {
@@ -90,7 +76,6 @@ struct MoviesDetailsView: View {
                             
                             Spacer()
                             
-                            // ✅ Share Button (Black Glass)
                             Button(action: {
                                 shareMovie()
                             }) {
@@ -103,7 +88,6 @@ struct MoviesDetailsView: View {
                             }
                             .padding(.trailing, 8)
                             
-                            // ✅ Save/Bookmark Button (Black Glass)
                             Button(action: {
                                 Task {
                                     await viewModel.toggleBookmark(movieId: movie.id)
@@ -342,7 +326,6 @@ struct MoviesDetailsView: View {
                 )
             }
         }
-        // ⭐️ UPDATED: Using .onAppear ensures data reloads when you come back from "Write Review"
         .onAppear {
             Task {
                 await viewModel.loadAllData(movieId: movie.id, signedInEmail: signedInEmail)

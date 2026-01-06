@@ -1,9 +1,3 @@
-//
-//  MovieCenterView.swift
-//  MovieApp_Team-4-_A
-//
-//  Created by Rana Alngashy on 16/07/1447 AH.
-//
 import SwiftUI
 
 struct MoviesCenterView: View {
@@ -47,11 +41,9 @@ struct MoviesCenterView: View {
                     }
                 }
             }
-            // ⭐️ ADDED: Navigation destination for MovieRecord -> MoviesDetailsView
             .navigationDestination(for: MovieRecord.self) { movie in
                 MoviesDetailsView(movie: movie, signedInEmail: signedInEmail)
             }
-            // ⭐️ ADDED: Navigation destination for String -> WriteReviewView
             .navigationDestination(for: AppRoute.self) { route in
                 switch route {
 
@@ -115,15 +107,25 @@ private var header: some View {
             .padding(.top)
         }
     }
-private var searchBar: some View {
+    private var searchBar: some View {
         HStack {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.gray)
-
-            TextField("Search for Movie name, actors...",
-                      text: $viewModel.searchText)
-                .foregroundColor(.white)
-                .autocorrectionDisabled()
+            
+            // ZStack allows us to layer a custom placeholder behind the TextField
+            ZStack(alignment: .leading) {
+                
+                // 1. Show this custom Text only when the search field is empty
+                if viewModel.searchText.isEmpty {
+                    Text("Search for Movie name, actors...")
+                        .foregroundColor(.white.opacity(0.6)) // 0.6 opacity looks best (distinct from typed text)
+                }
+                
+                // 2. The actual TextField (Empty string "" for the title since we have a custom one)
+                TextField("", text: $viewModel.searchText)
+                    .foregroundColor(.white) // This makes the text YOU TYPE white
+                    .autocorrectionDisabled()
+            }
         }
         .padding(12)
         .background(Color(white: 0.15))

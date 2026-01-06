@@ -35,7 +35,6 @@ struct SavedMovieCard: View {
     }
 }
 
-// ✅ Profile Home (with working Sign Out)
 struct ProfileHomeView: View {
 
     @Binding var isAuthenticated: Bool
@@ -43,8 +42,6 @@ struct ProfileHomeView: View {
 
     @EnvironmentObject var vm: ProfileViewModel
     @Environment(\.dismiss) var dismiss
-    
-    // ⭐️ Grid columns for saved movies
     let columns = [
         GridItem(.flexible(), spacing: 12),
         GridItem(.flexible(), spacing: 12)
@@ -124,7 +121,6 @@ struct ProfileHomeView: View {
                 }
                 .frame(maxWidth: .infinity)
             } else {
-                // ⭐️ CHANGED: Grid layout for saved movies (like screenshot)
                 ScrollView {
                     LazyVGrid(columns: columns, spacing: 12) {
                         ForEach(vm.savedMovies) { movie in
@@ -176,7 +172,6 @@ struct ProfileInfoView: View {
     @State private var selectedItem: PhotosPickerItem?
     @State private var selectedImage: UIImage?
 
-    // ✅ Dummy image URL (Pinterest)
     private let dummyImageURL =
     "https://i.pinimg.com/1200x/7e/fd/0f/7efd0f809a51439d0a75e7a8c414f0f5.jpg"
 
@@ -281,12 +276,12 @@ struct ProfileInfoView: View {
                         }
                     }
                     .disabled(!isEditing)
-                    .onChange(of: selectedItem) { newItem in   // ✅ ADD THIS LINE HERE
+                    .onChange(of: selectedItem) { newItem in
                         guard let newItem else { return }
                         Task {
                             if let data = try? await newItem.loadTransferable(type: Data.self),
                                let uiImage = UIImage(data: data) {
-                                selectedImage = uiImage   // ✅ show instantly
+                                selectedImage = uiImage   
                             }
                         }
                     }

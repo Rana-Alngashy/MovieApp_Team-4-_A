@@ -1,9 +1,3 @@
-//
-//  MovieViewModel.swift
-//  Movies
-//
-//  Created by Rana Alngashy on 06/07/1447 AH.
-//
 import Foundation
 import Combine
 import SwiftUI
@@ -17,7 +11,7 @@ class MovieViewModel: ObservableObject {
 
     private let apiService = APIService()
 
-    // This is the core logic for your search functionality
+    // This is the core logic for search functionality
     var filteredMovies: [MovieRecord] {
         guard !searchText.isEmpty else { return movies }
 

@@ -1,14 +1,3 @@
-//
-//  MovieHorizontalRow.swift
-//  MovieApp_Team-4-_A
-//
-//  Created by Rana Alngashy on 16/07/1447 AH.
-//
-//  MovieHorizontalRow.swift
-//  MovieApp_Team-4-_A
-//
-//  Created by Rana Alngashy on 16/07/1447 AH.
-
 import SwiftUI
 
 struct MovieHorizontalRow: View {

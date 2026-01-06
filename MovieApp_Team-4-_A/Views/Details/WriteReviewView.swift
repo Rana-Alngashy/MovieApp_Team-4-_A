@@ -1,36 +1,16 @@
-//
-//  WriteReviewView.swift
-//  Movies
-//
-//  Created by Rana Alngashy on 04/07/1447 AH.
-//
-//
-//  WriteReviewView.swift
-//  Movies
-//
-//  Created by Rana Alngashy on 04/07/1447 AH.
-//
 import SwiftUI
 
 struct WriteReviewView: View {
     @Environment(\.dismiss) var dismiss
-
-    // ✅ REQUIRED to post review
     let movieId: String
     let userId: String
 
     @State private var reviewText: String = ""
     @State private var rating: Int = 0
-    
-    // ⭐️ Added for error handling
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var isSubmitting = false
-
-    // Brand color
     let brandGold = Color(red: 0.9, green: 0.7, blue: 0.2)
-
-    // ✅ API
     private let apiService = APIService()
 
     var body: some View {
@@ -54,7 +34,6 @@ struct WriteReviewView: View {
 
                 Spacer()
 
-                // ✅ ADD REVIEW BUTTON
                 if isSubmitting {
                     ProgressView()
                         .tint(brandGold)
@@ -124,7 +103,7 @@ struct WriteReviewView: View {
         }
         .background(Color.black.ignoresSafeArea())
         .navigationBarHidden(true)
-        // ⭐️ Alert to show you the error if it fails
+        //  Alert to show you the error if it fails
         .alert("Error", isPresented: $showError) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -138,7 +117,6 @@ struct WriteReviewView: View {
             do {
                 print("📝 Submitting Review - Movie: \(movieId), User: \(userId)")
                 
-                // ⭐️ 1–5 UI → 1–10 Airtable
                 let airtableRating = rating * 2
                 
                 let _ = try await apiService.postReview(

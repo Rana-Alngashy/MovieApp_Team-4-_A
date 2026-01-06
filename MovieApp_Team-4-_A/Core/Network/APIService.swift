@@ -1,103 +1,114 @@
-//
-//  APIService.swift
-//  Movies
-//
-//  Created by Rana Alngashy on 06/07/1447 AH.
-//
-//
-
 import Foundation
 
 class APIService {
     
     private let baseURL = "https://api.airtable.com/v0/appsfcB6YESLj4NCN"
+    // Note: Breaking this token below allows you to test "Session Expired" (Test #2)
     private let token = "Bearer pat7E88yW3dgzlY61.2b7d03863aca9f1262dcb772f7728bd157e695799b43c7392d5faf4f52fcb001"
     
-    // MARK: - Fetch Actors
-    func fetchActors() async throws -> [ActorRecord] {
-        guard let url = URL(string: "\(baseURL)/actors") else {
-            throw URLError(.badURL)
+    // MARK: - Generic Helper
+    private func performRequest<T: Decodable>(urlString: String, method: String = "GET", body: [String: Any]? = nil) async throws -> T {
+        guard let url = URL(string: urlString) else {
+            throw APIError.invalidURL
         }
         
         var request = URLRequest(url: url)
-        request.httpMethod = "GET"
+        request.httpMethod = method
         request.setValue(token, forHTTPHeaderField: "Authorization")
         
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard (response as? HTTPURLResponse)?.statusCode == 200 else {
-            throw URLError(.badServerResponse)
+        if let body = body {
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            do {
+                request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            } catch {
+                throw APIError.unknown(error)
+            }
         }
         
-        let decoded = try JSONDecoder().decode(ActorResponse.self, from: data)
-        return decoded.records
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw APIError.requestFailed(statusCode: 0)
+            }
+            
+            // ERROR HANDLING LOGIC (Tests #2 & #3)
+            switch httpResponse.statusCode {
+            case 200...299:
+                break
+            case 401:
+                // Test #2: Session Expired
+                throw APIError.unauthorized
+            case 500...599:
+                // Test #3: Server Error
+                throw APIError.serverError
+            default:
+                // Test #3: 404 Not Found or other bad URL
+                if let errorString = String(data: data, encoding: .utf8) {
+                    print("❌ Server Error: \(errorString)")
+                }
+                throw APIError.requestFailed(statusCode: httpResponse.statusCode)
+            }
+            
+            // Handle DELETE empty response case
+            if method == "DELETE" && data.isEmpty {
+                 // Return empty data if T allows, or handle specifically.
+            }
+            
+            // Test #4: Decoding Error happens here if data doesn't match struct
+            let decoded = try JSONDecoder().decode(T.self, from: data)
+            return decoded
+            
+        } catch let error as DecodingError {
+            // Test #4: Explicitly catches data mismatch
+            print("❌ Decoding Error: \(error)")
+            throw APIError.decodingError
+            
+        } catch let error as APIError {
+            // Catches errors thrown manually above (like .unauthorized)
+            throw error
+            
+        } catch let error as URLError where error.code == .notConnectedToInternet {
+            // Test #1: Explicitly catches No Internet
+            // Wraps the system error so the UI says "The Internet connection appears to be offline."
+            print("❌ Internet Connection Error: \(error.localizedDescription)")
+            throw APIError.unknown(error)
+            
+        } catch {
+            // Fallback for any other weird system errors
+            throw APIError.unknown(error)
+        }
+    }
+    
+    // MARK: - Fetch Actors
+    func fetchActors() async throws -> [ActorRecord] {
+        let response: ActorResponse = try await performRequest(urlString: "\(baseURL)/actors")
+        return response.records
     }
     
     // MARK: - Fetch Directors
     func fetchDirectors() async throws -> [DirectorRecord] {
-        guard let url = URL(string: "\(baseURL)/directors") else {
-            throw URLError(.badURL)
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue(token, forHTTPHeaderField: "Authorization")
-        
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard (response as? HTTPURLResponse)?.statusCode == 200 else {
-            throw URLError(.badServerResponse)
-        }
-        
-        let decoded = try JSONDecoder().decode(DirectorResponse.self, from: data)
-        return decoded.records
+        let response: DirectorResponse = try await performRequest(urlString: "\(baseURL)/directors")
+        return response.records
     }
     
+    // MARK: - Fetch Movies
     func fetchMovies() async throws -> [MovieRecord] {
-        guard let url = URL(string: "\(baseURL)/movies") else {
-            throw URLError(.badURL)
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue(token, forHTTPHeaderField: "Authorization")
-        
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard (response as? HTTPURLResponse)?.statusCode == 200 else {
-            throw URLError(.badServerResponse)
-        }
-        
-        let decoded = try JSONDecoder().decode(MovieResponse.self, from: data)
-        return decoded.records
+        let response: MovieResponse = try await performRequest(urlString: "\(baseURL)/movies")
+        return response.records
     }
     
-    // MARK: - ADD YOUR FUNCTIONS BELOW THIS
-    
-    // ✅ View profile
-    func fetchProfileByEmail(email: String) async throws
-    -> (user: UserRecord, savedMovies: [MovieRecord]) {
-        
+    // MARK: - User & Profile
+    func fetchProfileByEmail(email: String) async throws -> (user: UserRecord, savedMovies: [MovieRecord]) {
         var comps = URLComponents(string: "\(baseURL)/users")!
-        comps.queryItems = [
-            URLQueryItem(
-                name: "filterByFormula",
-                value: "LOWER({email})=LOWER(\"\(email)\")"
-            )
-        ]
+        comps.queryItems = [URLQueryItem(name: "filterByFormula", value: "LOWER({email})=LOWER(\"\(email)\")")]
         
-        var request = URLRequest(url: comps.url!)
-        request.httpMethod = "GET"
-        request.setValue(token, forHTTPHeaderField: "Authorization")
+        guard let urlString = comps.url?.absoluteString else { throw APIError.invalidURL }
         
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-            throw URLError(.badServerResponse)
-        }
+        let userResponse: UserResponse = try await performRequest(urlString: urlString)
         
-        let decoded = try JSONDecoder().decode(UserResponse.self, from: data)
-        guard let user = decoded.records.first else {
-            throw URLError(.cannotParseResponse)
+        guard let user = userResponse.records.first else {
+            throw APIError.unknown(NSError(domain: "UserNotFound", code: 404))
         }
         
         let savedMovies = try await fetchSavedMovies(userRecordID: user.id)
@@ -105,84 +116,45 @@ class APIService {
         return (user: user, savedMovies: savedMovies)
     }
     
-    // ✅ Fetch saved movies
+    // OPTIMIZED: Parallel Fetching
     func fetchSavedMovies(userRecordID: String) async throws -> [MovieRecord] {
-        
         var comps = URLComponents(string: "\(baseURL)/saved_movies")!
-        comps.queryItems = [
-            URLQueryItem(name: "filterByFormula", value: "{user_id}=\"\(userRecordID)\"")
-        ]
+        comps.queryItems = [URLQueryItem(name: "filterByFormula", value: "{user_id}=\"\(userRecordID)\"")]
         
-        var request = URLRequest(url: comps.url!)
-        request.httpMethod = "GET"
-        request.setValue(token, forHTTPHeaderField: "Authorization")
+        guard let urlString = comps.url?.absoluteString else { throw APIError.invalidURL }
         
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-            throw URLError(.badServerResponse)
-        }
+        let response: SavedMoviesResponse = try await performRequest(urlString: urlString)
+        let movieIDs = response.records.flatMap { $0.fields.movieID }
         
-        let decoded = try JSONDecoder().decode(SavedMoviesResponse.self, from: data)
-        
-        let movieIDs = decoded.records.flatMap { $0.fields.movieID }
         if movieIDs.isEmpty { return [] }
         
-        var movies: [MovieRecord] = []
-        movies.reserveCapacity(movieIDs.count)
-        
-        for id in movieIDs {
-            let url = URL(string: "\(baseURL)/movies/\(id)")!
-            var req = URLRequest(url: url)
-            req.httpMethod = "GET"
-            req.setValue(token, forHTTPHeaderField: "Authorization")
-            
-            let (mdata, mresp) = try await URLSession.shared.data(for: req)
-            guard let mhttp = mresp as? HTTPURLResponse, (200...299).contains(mhttp.statusCode) else {
-                throw URLError(.badServerResponse)
+        return try await withThrowingTaskGroup(of: MovieRecord.self) { group in
+            for id in movieIDs {
+                group.addTask {
+                    return try await self.performRequest(urlString: "\(self.baseURL)/movies/\(id)")
+                }
             }
             
-            movies.append(try JSONDecoder().decode(MovieRecord.self, from: mdata))
+            var movies: [MovieRecord] = []
+            for try await movie in group {
+                movies.append(movie)
+            }
+            return movies
         }
-        
-        return movies
-    }
-   
-    // MARK: - Fetch Reviews for a Movie
-    func fetchMovieReviews(movieId: String) async throws -> [ReviewRecord] {
-        let filterFormula = "movie_id=\"\(movieId)\""
-        guard let encodedFilter = filterFormula.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let url = URL(string: "\(baseURL)/reviews?filterByFormula=\(encodedFilter)") else {
-            throw URLError(.badURL)
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue(token, forHTTPHeaderField: "Authorization")
-        
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard (response as? HTTPURLResponse)?.statusCode == 200 else {
-            throw URLError(.badServerResponse)
-        }
-        
-        let decoded = try JSONDecoder().decode(ReviewResponse.self, from: data)
-        
-        // ⭐️ SORTED: Sorts reviews by createdTime (Newest > Oldest)
-        return decoded.records.sorted { $0.createdTime > $1.createdTime }
     }
     
-    // MARK: - Post a Review
-    func postReview(movieId: String, userId: String, text: String, rating: Int) async throws -> ReviewRecord {
-        guard let url = URL(string: "\(baseURL)/reviews") else {
-            throw URLError(.badURL)
+    // MARK: - Reviews
+    func fetchMovieReviews(movieId: String) async throws -> [ReviewRecord] {
+        let filterFormula = "movie_id=\"\(movieId)\""
+        guard let encodedFilter = filterFormula.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+             throw APIError.invalidURL
         }
         
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue(token, forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        // ⭐️ Using Strings for IDs (matching your Postman)
+        let response: ReviewResponse = try await performRequest(urlString: "\(baseURL)/reviews?filterByFormula=\(encodedFilter)")
+        return response.records.sorted { $0.createdTime > $1.createdTime }
+    }
+    
+    func postReview(movieId: String, userId: String, text: String, rating: Int) async throws -> ReviewRecord {
         let body: [String: Any] = [
             "fields": [
                 "review_text": text,
@@ -192,32 +164,11 @@ class APIService {
             ]
         ]
         
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 {
-            if let responseString = String(data: data, encoding: .utf8) {
-                print("❌ Airtable Error Response: \(responseString)")
-            }
-            throw URLError(.badServerResponse)
-        }
-        
-        let decoded = try JSONDecoder().decode(ReviewRecord.self, from: data)
-        return decoded
+        return try await performRequest(urlString: "\(baseURL)/reviews", method: "POST", body: body)
     }
     
-    // MARK: - Save Movie (Bookmark)
+    // MARK: - Actions
     func saveMovie(userId: String, movieId: String) async throws -> String {
-        guard let url = URL(string: "\(baseURL)/saved_movies") else {
-            throw URLError(.badURL)
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue(token, forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
         let body: [String: Any] = [
             "fields": [
                 "user_id": userId,
@@ -225,186 +176,97 @@ class APIService {
             ]
         ]
         
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard (response as? HTTPURLResponse)?.statusCode == 200 else {
-            throw URLError(.badServerResponse)
-        }
-        
-        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-        guard let recordId = json?["id"] as? String else {
-            throw URLError(.cannotParseResponse)
-        }
-        
-        return recordId
+        struct SaveResponse: Decodable { let id: String }
+        let response: SaveResponse = try await performRequest(urlString: "\(baseURL)/saved_movies", method: "POST", body: body)
+        return response.id
     }
     
-    // MARK: - Unsave Movie
     func unsaveMovie(savedMovieId: String) async throws {
-        guard let url = URL(string: "\(baseURL)/saved_movies/\(savedMovieId)") else {
-            throw URLError(.badURL)
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "DELETE"
-        request.setValue(token, forHTTPHeaderField: "Authorization")
-        
-        let (_, response) = try await URLSession.shared.data(for: request)
-        
-        guard (response as? HTTPURLResponse)?.statusCode == 200 else {
-            throw URLError(.badServerResponse)
-        }
+        struct DeleteResponse: Decodable { let id: String; let deleted: Bool }
+        let _: DeleteResponse = try await performRequest(urlString: "\(baseURL)/saved_movies/\(savedMovieId)", method: "DELETE")
     }
     
-    // MARK: - Check if Movie is Saved
     func checkIfMovieSaved(userId: String, movieId: String) async throws -> String? {
         let filterFormula = "AND(user_id=\"\(userId)\",movie_id=\"\(movieId)\")"
-        guard let encodedFilter = filterFormula.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let url = URL(string: "\(baseURL)/saved_movies?filterByFormula=\(encodedFilter)") else {
-            throw URLError(.badURL)
+        guard let encodedFilter = filterFormula.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+            throw APIError.invalidURL
         }
         
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue(token, forHTTPHeaderField: "Authorization")
-        
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard (response as? HTTPURLResponse)?.statusCode == 200 else {
-            throw URLError(.badServerResponse)
+        struct GenericRecordResponse: Decodable {
+            let records: [TempRecord]
+            struct TempRecord: Decodable { let id: String }
         }
         
-        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-        guard let records = json?["records"] as? [[String: Any]],
-              let firstRecord = records.first,
-              let recordId = firstRecord["id"] as? String else {
-            return nil
-        }
-        
-        return recordId
+        let response: GenericRecordResponse = try await performRequest(urlString: "\(baseURL)/saved_movies?filterByFormula=\(encodedFilter)")
+        return response.records.first?.id
     }
-    
-    // MARK: - Sign In
+
+    // MARK: - User Updates
     func signInExistingUser(email: String, password: String) async throws -> UserRecord {
         let cleanEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let url = URL(string: "\(baseURL)/users")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue(token, forHTTPHeaderField: "Authorization")
-
-        let (data, _) = try await URLSession.shared.data(for: request)
-        let decoded = try JSONDecoder().decode(UserResponse.self, from: data)
-
-        guard let user = decoded.records.first(where: {
-            $0.fields.email.lowercased() == cleanEmail
-        }) else {
-            throw NSError(domain: "Auth", code: 1, userInfo: [NSLocalizedDescriptionKey: "User not found"])
+        
+        let response: UserResponse = try await performRequest(urlString: "\(baseURL)/users")
+        
+        guard let user = response.records.first(where: { $0.fields.email.lowercased() == cleanEmail }) else {
+            throw APIError.unknown(NSError(domain: "Auth", code: 404, userInfo: [NSLocalizedDescriptionKey: "User not found"]))
         }
         return user
     }
     
-    // MARK: - Update Profile
     func updateUserProfile(recordID: String, name: String, email: String) async throws {
-        let url = URL(string: "\(baseURL)/users/\(recordID)")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "PATCH"
-        request.setValue(token, forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
         let body: [String: Any] = ["fields": ["name": name, "email": email]]
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
-
-        let (_, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-            throw URLError(.badServerResponse)
-        }
+        let _: UserRecord = try await performRequest(urlString: "\(baseURL)/users/\(recordID)", method: "PATCH", body: body)
     }
     
     func updateUserProfileImage(recordID: String, imageURL: String) async throws {
-        let url = URL(string: "\(baseURL)/users/\(recordID)")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "PATCH"
-        request.setValue(token, forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
         let body: [String: Any] = ["fields": ["profile_image": imageURL]]
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
-
-        let (_, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-            throw URLError(.badServerResponse)
-        }
+        let _: UserRecord = try await performRequest(urlString: "\(baseURL)/users/\(recordID)", method: "PATCH", body: body)
     }
     
-    // MARK: - Fetch Movie Actors
+    // MARK: - Junction Tables (Optimized)
     func fetchMovieActors(movieId: String) async throws -> [ActorRecord] {
         let filterFormula = "{movie_id}=\"\(movieId)\""
-        guard let encodedFilter = filterFormula.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let url = URL(string: "\(baseURL)/movie_actors?filterByFormula=\(encodedFilter)") else {
-            throw URLError(.badURL)
-        }
+        guard let encodedFilter = filterFormula.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { throw APIError.invalidURL }
         
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue(token, forHTTPHeaderField: "Authorization")
+        let response: MovieActorsResponse = try await performRequest(urlString: "\(baseURL)/movie_actors?filterByFormula=\(encodedFilter)")
         
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
-        
-        let decoded = try JSONDecoder().decode(MovieActorsResponse.self, from: data)
-        let actorIds = decoded.records.map { $0.fields.actor_id }
+        let actorIds = response.records.map { $0.fields.actor_id }
         if actorIds.isEmpty { return [] }
         
-        var actors: [ActorRecord] = []
-        for actorId in actorIds {
-            let actorUrl = URL(string: "\(baseURL)/actors/\(actorId)")!
-            var actorRequest = URLRequest(url: actorUrl)
-            actorRequest.httpMethod = "GET"
-            actorRequest.setValue(token, forHTTPHeaderField: "Authorization")
-            
-            let (actorData, actorResponse) = try await URLSession.shared.data(for: actorRequest)
-            guard (actorResponse as? HTTPURLResponse)?.statusCode == 200 else { continue }
-            
-            let actor = try JSONDecoder().decode(ActorRecord.self, from: actorData)
-            actors.append(actor)
+        return try await withThrowingTaskGroup(of: ActorRecord.self) { group in
+            for actorId in actorIds {
+                group.addTask {
+                    return try await self.performRequest(urlString: "\(self.baseURL)/actors/\(actorId)")
+                }
+            }
+            var actors: [ActorRecord] = []
+            for try await actor in group {
+                actors.append(actor)
+            }
+            return actors
         }
-        return actors
     }
     
-    // MARK: - Fetch Movie Directors
     func fetchMovieDirectors(movieId: String) async throws -> [DirectorRecord] {
         let filterFormula = "{movie_id}=\"\(movieId)\""
-        guard let encodedFilter = filterFormula.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let url = URL(string: "\(baseURL)/movie_directors?filterByFormula=\(encodedFilter)") else {
-            throw URLError(.badURL)
-        }
+        guard let encodedFilter = filterFormula.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { throw APIError.invalidURL }
         
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue(token, forHTTPHeaderField: "Authorization")
+        let response: MovieDirectorsResponse = try await performRequest(urlString: "\(baseURL)/movie_directors?filterByFormula=\(encodedFilter)")
         
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
-        
-        let decoded = try JSONDecoder().decode(MovieDirectorsResponse.self, from: data)
-        let directorIds = decoded.records.map { $0.fields.director_id }
+        let directorIds = response.records.map { $0.fields.director_id }
         if directorIds.isEmpty { return [] }
         
-        var directors: [DirectorRecord] = []
-        for directorId in directorIds {
-            let directorUrl = URL(string: "\(baseURL)/directors/\(directorId)")!
-            var directorRequest = URLRequest(url: directorUrl)
-            directorRequest.httpMethod = "GET"
-            directorRequest.setValue(token, forHTTPHeaderField: "Authorization")
-            
-            let (directorData, directorResponse) = try await URLSession.shared.data(for: directorRequest)
-            guard (directorResponse as? HTTPURLResponse)?.statusCode == 200 else { continue }
-            
-            let director = try JSONDecoder().decode(DirectorRecord.self, from: directorData)
-            directors.append(director)
+        return try await withThrowingTaskGroup(of: DirectorRecord.self) { group in
+            for directorId in directorIds {
+                group.addTask {
+                    return try await self.performRequest(urlString: "\(self.baseURL)/directors/\(directorId)")
+                }
+            }
+            var directors: [DirectorRecord] = []
+            for try await director in group {
+                directors.append(director)
+            }
+            return directors
         }
-        return directors
     }
 }

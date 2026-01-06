@@ -138,7 +138,6 @@ struct SignInView: View {
                                password: password
                             )
 
-                            // ✅ ONLY HERE login is allowed
                             signedInEmail = user.fields.email
                             isAuthenticated = true
 

@@ -11,9 +11,7 @@ final class ProfileViewModel: ObservableObject {
     @Published var savedMovies: [MovieRecord] = []
     @Published var isLoading = false
 
-    // ✅ REQUIRED: store Airtable record ID
     private(set) var userRecordID: String?
-
     private let apiService = APIService()
 
     // MARK: - Load Profile
@@ -24,10 +22,8 @@ final class ProfileViewModel: ObservableObject {
         do {
             let result = try await apiService.fetchProfileByEmail(email: email)
 
-            // ✅ SAVE RECORD ID
+            
             self.userRecordID = result.user.id
-
-            // ✅ Update UI
             self.name = result.user.fields.name ?? ""
             self.email = result.user.fields.email
             self.profileImage = result.user.fields.profileImage ?? ""
@@ -54,8 +50,6 @@ final class ProfileViewModel: ObservableObject {
                 name: cleanName,
                 email: cleanEmail
             )
-
-            // ✅ Keep UI in sync after successful save
             self.name = cleanName
             self.email = cleanEmail
 
@@ -76,7 +70,6 @@ final class ProfileViewModel: ObservableObject {
                 imageURL: imageURL
             )
 
-            // ✅ Update UI after successful save
             self.profileImage = imageURL
 
         } catch {
