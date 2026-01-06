@@ -1,16 +1,15 @@
-
 import Foundation
 
-struct UserResponse: Codable, Sendable { // Added Sendable
+struct UserResponse: Codable, Sendable {
     let records: [UserRecord]
 }
 
-struct UserRecord: Codable, Identifiable, Sendable { // Added Sendable
+struct UserRecord: Codable, Identifiable, Sendable {
     let id: String
     let fields: UserFields
 }
 
-struct UserFields: Codable, Sendable { // Added Sendable
+struct UserFields: Codable, Sendable {
     let name: String?
     let email: String
     let password: String?

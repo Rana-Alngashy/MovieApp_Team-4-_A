@@ -5,7 +5,7 @@ struct MovieResponse: Codable, Sendable { // Added Sendable
     let records: [MovieRecord]
 }
 
-struct MovieRecord: Codable, Identifiable, Hashable, Sendable { // Added Sendable
+struct MovieRecord: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let fields: MovieFields
     
@@ -18,7 +18,7 @@ struct MovieRecord: Codable, Identifiable, Hashable, Sendable { // Added Sendabl
     }
 }
 
-struct MovieFields: Codable, Sendable { // Added Sendable
+struct MovieFields: Codable, Sendable {
     let name: String
     let poster: String
     let story: String
@@ -35,16 +35,16 @@ struct MovieFields: Codable, Sendable { // Added Sendable
     }
 }
 
-struct SavedMoviesResponse: Codable, Sendable { // Added Sendable
+struct SavedMoviesResponse: Codable, Sendable {
     let records: [SavedMovieRecord]
 }
 
-struct SavedMovieRecord: Codable, Identifiable, Sendable { // Added Sendable
+struct SavedMovieRecord: Codable, Identifiable, Sendable {
     let id: String
     let fields: SavedMovieFields
 }
 
-struct SavedMovieFields: Codable, Sendable { // Added Sendable
+struct SavedMovieFields: Codable, Sendable { 
     let userID: String
     let movieID: [String]
 

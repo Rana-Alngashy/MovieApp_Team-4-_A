@@ -18,9 +18,6 @@ struct ReviewRecord: Codable, Identifiable, Sendable {
 struct ReviewFields: Codable, Sendable {
     let reviewText: String?
     let rate: Double?
-    
-    // ✅ FIXED: Changed back to String? based on your Postman file.
-    // The error -1011 happened because we tried to use [String].
     let movieId: String?
     let userId: String?
     
